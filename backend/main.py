@@ -289,6 +289,47 @@ def get_products(
         
     return results
 
+@app.get("/api/products/featured")
+def get_featured_products(session: Session = Depends(get_session)):
+    statement = select(models.Product).where(
+        and_(models.Product.is_featured == True, models.Product.status == "active")
+    )
+    featured = session.exec(statement).all()
+    
+    if len(featured) < 4:
+        statement_other = select(models.Product).where(
+            and_(models.Product.is_featured == False, models.Product.status == "active")
+        ).limit(4 - len(featured))
+        other_active = session.exec(statement_other).all()
+        featured.extend(other_active)
+        
+    featured = featured[:4]
+    
+    results = []
+    for p in featured:
+        artisan = session.get(models.Artisan, p.artisan_id)
+        artisan_user = session.get(models.User, artisan.user_id) if artisan else None
+        category = session.get(models.Category, p.category_id)
+        
+        results.append({
+            "id": p.id,
+            "title": p.title,
+            "description": p.description,
+            "base_price": p.base_price,
+            "is_customizable": p.is_customizable,
+            "is_featured": p.is_featured,
+            "stock_qty": p.stock_qty,
+            "images": p.images,
+            "status": p.status,
+            "artisan_name": artisan_user.name if artisan_user else "Unknown Artisan",
+            "artisan_id": p.artisan_id,
+            "artisan_rating": artisan.rating if artisan else 5.0,
+            "category_name": category.name if category else "General",
+            "category_slug": category.slug if category else "general"
+        })
+        
+    return results
+
 @app.get("/api/products/{product_id}")
 def get_product(product_id: int, session: Session = Depends(get_session)):
     product = session.get(models.Product, product_id)
@@ -784,44 +825,4 @@ def set_featured_products(req: FeaturedProductsRequest, session: Session = Depen
     session.commit()
     return {"success": True, "message": "Top 4 featured products updated."}
 
-@app.get("/api/products/featured")
-def get_featured_products(session: Session = Depends(get_session)):
-    statement = select(models.Product).where(
-        and_(models.Product.is_featured == True, models.Product.status == "active")
-    )
-    featured = session.exec(statement).all()
-    
-    if len(featured) < 4:
-        statement_other = select(models.Product).where(
-            and_(models.Product.is_featured == False, models.Product.status == "active")
-        ).limit(4 - len(featured))
-        other_active = session.exec(statement_other).all()
-        featured.extend(other_active)
-        
-    featured = featured[:4]
-    
-    results = []
-    for p in featured:
-        artisan = session.get(models.Artisan, p.artisan_id)
-        artisan_user = session.get(models.User, artisan.user_id) if artisan else None
-        category = session.get(models.Category, p.category_id)
-        
-        results.append({
-            "id": p.id,
-            "title": p.title,
-            "description": p.description,
-            "base_price": p.base_price,
-            "is_customizable": p.is_customizable,
-            "is_featured": p.is_featured,
-            "stock_qty": p.stock_qty,
-            "images": p.images,
-            "status": p.status,
-            "artisan_name": artisan_user.name if artisan_user else "Unknown Artisan",
-            "artisan_id": p.artisan_id,
-            "artisan_rating": artisan.rating if artisan else 5.0,
-            "category_name": category.name if category else "General",
-            "category_slug": category.slug if category else "general"
-        })
-        
-    return results
 
