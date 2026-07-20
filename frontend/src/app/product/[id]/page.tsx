@@ -563,6 +563,11 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                     ))}
                   </div>
                 )}
+
+                {/* Disclaimer warning */}
+                <p className="text-[9px] text-foreground/45 italic text-center max-w-xs mx-auto mt-3 leading-relaxed border-t border-sandstone-light/10 pt-2.5 w-full">
+                  *Disclaimer: Real products are individually made by local artisans. The final item may have unique textures or shades differing from photos.
+                </p>
               </>
             )}
           </div>
@@ -605,6 +610,12 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
             <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed">
               {product.description}
             </p>
+
+            {!product.is_customizable && (
+              <div className="bg-sandstone-light/10 border border-sandstone-light/20 rounded-xl p-3.5 text-xs text-foreground/50 font-semibold italic text-left">
+                ⚠️ Customization is not available for this unique item.
+              </div>
+            )}
 
             {/* Artisan Card Box */}
             <div className="border border-sandstone-light/25 bg-cream-dark/20 rounded-2xl p-5 flex flex-col sm:flex-row gap-4 items-center">
