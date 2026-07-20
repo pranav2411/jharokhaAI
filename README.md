@@ -1,4 +1,4 @@
-# Jharokha Artisan Marketplace
+# Jharokha Artisan Marketplaces
 
 A customized marketplace platform for local artisans to showcase and sell their products.
 
