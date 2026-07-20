@@ -9,6 +9,7 @@ class User(SQLModel, table=True):
     password_hash: Optional[str] = Field(default=None)
     role: str = Field(default="customer")  # customer, artisan, admin
     phone: Optional[str] = None
+    shipping_address: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
@@ -109,8 +110,17 @@ class Review(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id")
     rating: int = Field(default=5)
     comment: str
+    images: List[str] = Field(default=[], sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
     product: Product = Relationship(back_populates="reviews")
     user: User = Relationship()
+
+class CallbackRequest(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    user_name: str
+    phone: str
+    status: str = Field(default="pending")  # pending, completed
+    created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -7,6 +7,7 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
+  shipping_address?: string;
   role: string; // customer, artisan, admin
 }
 
@@ -18,6 +19,7 @@ interface AuthContextType {
   loginGoogle: (email: string, name: string) => Promise<User>;
   register: (name: string, email: string, password: string, phone: string, acceptTerms: boolean) => Promise<User>;
   logout: () => void;
+  updateCurrentUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -127,8 +129,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("jharokha_user");
   };
 
+  const updateCurrentUser = (user: User) => {
+    setCurrentUser(user);
+    localStorage.setItem("jharokha_user", JSON.stringify(user));
+  };
+
   return (
-    <AuthContext.Provider value={{ currentUser, loading, login, loginPhone, loginGoogle, register, logout }}>
+    <AuthContext.Provider value={{ currentUser, loading, login, loginPhone, loginGoogle, register, logout, updateCurrentUser }}>
       {children}
     </AuthContext.Provider>
   );

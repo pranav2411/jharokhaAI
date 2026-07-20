@@ -63,6 +63,19 @@ class CreateAdminRequest(BaseModel):
     phone: Optional[str] = None
     password: str
 
+class UserProfileUpdate(BaseModel):
+    user_id: int
+    name: str
+    email: str
+    phone: Optional[str] = None
+    shipping_address: Optional[str] = None
+    password: Optional[str] = None
+
+class CallbackRequestPayload(BaseModel):
+    user_id: Optional[int] = None
+    user_name: str
+    phone: str
+
 # --- Users & Auth (Real Authentication & Simulation) ---
 
 @app.post("/api/auth/register", response_model=models.User)
@@ -354,6 +367,7 @@ def get_product(product_id: int, session: Session = Depends(get_session)):
             "id": r.id,
             "rating": r.rating,
             "comment": r.comment,
+            "images": r.images,
             "user_name": user.name if user else "Anonymous",
             "created_at": r.created_at
         })
@@ -824,5 +838,57 @@ def set_featured_products(req: FeaturedProductsRequest, session: Session = Depen
         
     session.commit()
     return {"success": True, "message": "Top 4 featured products updated."}
+
+@app.put("/api/users/profile", response_model=models.User)
+def update_user_profile(req: UserProfileUpdate, session: Session = Depends(get_session)):
+    user = session.get(models.User, req.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Check duplicate email
+    if req.email.strip().lower() != user.email:
+        existing = session.exec(select(models.User).where(models.User.email == req.email.strip().lower())).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email is already registered by another account.")
+            
+    user.name = req.name
+    user.email = req.email.strip().lower()
+    user.phone = req.phone
+    user.shipping_address = req.shipping_address
+    if req.password and req.password.strip():
+        user.password_hash = hash_password(req.password)
+        
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+@app.post("/api/chatbot/callback-request", response_model=models.CallbackRequest)
+def create_callback_request(req: CallbackRequestPayload, session: Session = Depends(get_session)):
+    db_req = models.CallbackRequest(
+        user_id=req.user_id,
+        user_name=req.user_name,
+        phone=req.phone,
+        status="pending"
+    )
+    session.add(db_req)
+    session.commit()
+    session.refresh(db_req)
+    return db_req
+
+@app.get("/api/admin/callback-requests")
+def get_callback_requests(session: Session = Depends(get_session)):
+    return session.exec(select(models.CallbackRequest).order_by(models.CallbackRequest.created_at.desc())).all()
+
+@app.put("/api/admin/callback-requests/{id}")
+def resolve_callback_request(id: int, session: Session = Depends(get_session)):
+    db_req = session.get(models.CallbackRequest, id)
+    if not db_req:
+        raise HTTPException(status_code=404, detail="Callback request not found")
+    db_req.status = "completed"
+    session.add(db_req)
+    session.commit()
+    session.refresh(db_req)
+    return db_req
 
 

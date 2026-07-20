@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { 
   Plus, Edit2, Trash2, LayoutDashboard, ShoppingCart, MessageSquare, 
   IndianRupee, Upload, Sparkles, Check, Settings, ShieldAlert, AlertCircle,
-  UserPlus, Shield
+  UserPlus, Shield, PhoneCall, Trash, X
 } from "lucide-react";
 import Link from "next/link";
 
@@ -56,7 +56,7 @@ export default function AdminPortal() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Tab control
-  const [activeTab, setActiveTab] = useState<"analytics" | "products" | "orders" | "reviews" | "payments" | "featured" | "admins">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "products" | "orders" | "reviews" | "payments" | "featured" | "admins" | "callbacks">("analytics");
 
   // Data states
   const [products, setProducts] = useState<any[]>([]);
@@ -64,6 +64,7 @@ export default function AdminPortal() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [payments, setPayments] = useState<any>({ total_sales: 0, transactions: [] });
   const [users, setUsers] = useState<any[]>([]);
+  const [callbackRequests, setCallbackRequests] = useState<any[]>([]);
   const [featuredIds, setFeaturedIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -74,12 +75,11 @@ export default function AdminPortal() {
   const [basePrice, setBasePrice] = useState(1200);
   const [category, setCategory] = useState(3); // Default category (1=Textiles, 2=Pottery, 3=Woodwork)
   const [isCustomizable, setIsCustomizable] = useState(true);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState("");
+  const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Customization Options Config
-  const [customOptionName, setCustomOptionName] = useState("Lining Selection");
-  const [customOptionType, setCustomOptionType] = useState("color_swatch"); // color_swatch, select, text
+  // Customization Options Config (Decided by Admin)
+  const [customOptions, setCustomOptions] = useState<any[]>([]);
 
   // Feedback states
   const [formFeedback, setFormFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -91,6 +91,75 @@ export default function AdminPortal() {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminPhone, setAdminPhone] = useState("");
+
+  const addCustomOption = () => {
+    setCustomOptions(prev => [...prev, { option_name: "", option_type: "select", choices: [] }]);
+  };
+
+  const removeCustomOption = (index: number) => {
+    setCustomOptions(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const updateCustomOptionName = (index: number, val: string) => {
+    setCustomOptions(prev => prev.map((opt, idx) => idx === index ? { ...opt, option_name: val } : opt));
+  };
+
+  const updateCustomOptionType = (index: number, val: string) => {
+    setCustomOptions(prev => {
+      const choices = val === "text" 
+        ? { placeholder: "Enter text...", max_len: 10, price: 100 }
+        : [];
+      return prev.map((opt, idx) => idx === index ? { ...opt, option_type: val, choices } : opt);
+    });
+  };
+
+  const addChoiceToOption = (optIndex: number) => {
+    setCustomOptions(prev => prev.map((opt, idx) => {
+      if (idx === optIndex && Array.isArray(opt.choices)) {
+        return {
+          ...opt,
+          choices: [...opt.choices, { name: "", price: 0, color: "#000000" }]
+        };
+      }
+      return opt;
+    }));
+  };
+
+  const removeChoiceFromOption = (optIndex: number, choiceIndex: number) => {
+    setCustomOptions(prev => prev.map((opt, idx) => {
+      if (idx === optIndex && Array.isArray(opt.choices)) {
+        return {
+          ...opt,
+          choices: opt.choices.filter((_: any, cIdx: number) => cIdx !== choiceIndex)
+        };
+      }
+      return opt;
+    }));
+  };
+
+  const updateChoiceField = (optIndex: number, choiceIndex: number, field: string, val: any) => {
+    setCustomOptions(prev => prev.map((opt, idx) => {
+      if (idx === optIndex && Array.isArray(opt.choices)) {
+        const updatedChoices = opt.choices.map((c: any, cIdx: number) => 
+          cIdx === choiceIndex ? { ...c, [field]: val } : c
+        );
+        return { ...opt, choices: updatedChoices };
+      }
+      return opt;
+    }));
+  };
+
+  const updateTextChoiceField = (optIndex: number, field: string, val: any) => {
+    setCustomOptions(prev => prev.map((opt, idx) => {
+      if (idx === optIndex && !Array.isArray(opt.choices)) {
+        return {
+          ...opt,
+          choices: { ...opt.choices, [field]: val }
+        };
+      }
+      return opt;
+    }));
+  };
 
   const loadAllAdminData = async () => {
     try {
@@ -132,6 +201,13 @@ export default function AdminPortal() {
         const usersData = await usersRes.json();
         setUsers(usersData);
       }
+
+      // Fetch Chatbot Callback Requests
+      const callbacksRes = await fetch("http://localhost:8000/api/admin/callback-requests");
+      if (callbacksRes.ok) {
+        const callbacksData = await callbacksRes.json();
+        setCallbackRequests(callbacksData);
+      }
     } catch (err) {
       console.error("Error fetching admin archives from backend:", err);
     } finally {
@@ -160,7 +236,13 @@ export default function AdminPortal() {
 
       if (res.ok) {
         const data = await res.json();
-        setUploadedImageUrl(data.url);
+        setUploadedImageUrls(prev => {
+          if (prev.length >= 6) {
+            alert("Maximum 6 images are allowed.");
+            return prev;
+          }
+          return [...prev, data.url];
+        });
       } else {
         alert("Upload failed. Make sure FastAPI server is running with python-multipart.");
       }
@@ -169,7 +251,13 @@ export default function AdminPortal() {
       // Fallback: Read file locally as base64 to allow offline dev previews!
       const reader = new FileReader();
       reader.onloadend = () => {
-        setUploadedImageUrl(reader.result as string);
+        setUploadedImageUrls(prev => {
+          if (prev.length >= 6) {
+            alert("Maximum 6 images are allowed.");
+            return prev;
+          }
+          return [...prev, reader.result as string];
+        });
       };
       reader.readAsDataURL(file);
     } finally {
@@ -182,28 +270,9 @@ export default function AdminPortal() {
     e.preventDefault();
     if (!title || !description) return;
 
-    // Build default customization configuration
-    let choices: any = [];
-    if (customOptionType === "color_swatch") {
-      choices = [
-        { name: "Royal Saffron", price: 0.0, color: "#D98354" },
-        { name: "Terracotta Clay", price: 100.0, color: "#C26D4C" },
-        { name: "Indigo Khadi", price: 150.0, color: "#1A2B4C" }
-      ];
-    } else if (customOptionType === "select") {
-      choices = [
-        { name: "Classic Standard", price: 0.0 },
-        { name: "Large Premium Size", price: 300.0 }
-      ];
-    } else {
-      choices = {
-        placeholder: "Enter monogram initials (Max 6 chars)",
-        max_len: 6,
-        price: 180.0
-      };
-    }
-
-    const imgUrl = uploadedImageUrl || "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=600&auto=format&fit=crop&q=80";
+    const imagesList = uploadedImageUrls.length > 0 
+      ? uploadedImageUrls 
+      : ["https://images.unsplash.com/photo-1590736969955-71cc94801759?w=600&auto=format&fit=crop&q=80"];
 
     const payload = {
       artisan_id: 1, // Seeded Riya Sen profile
@@ -213,16 +282,9 @@ export default function AdminPortal() {
       base_price: Number(basePrice),
       is_customizable: isCustomizable,
       stock_qty: 10,
-      images: [imgUrl],
+      images: imagesList,
       status: "active",
-      customization_options: isCustomizable ? [
-        {
-          option_name: customOptionName,
-          option_type: customOptionType,
-          choices,
-          price_delta: 0.0
-        }
-      ] : []
+      customization_options: isCustomizable ? customOptions : []
     };
 
     try {
@@ -273,7 +335,8 @@ export default function AdminPortal() {
     else if (prod.category_slug === "pottery") catId = 2;
     setCategory(catId);
     setIsCustomizable(prod.is_customizable);
-    setUploadedImageUrl(prod.images[0]);
+    setUploadedImageUrls(prod.images || []);
+    setCustomOptions(prod.customization_options || []);
   };
 
   const handleDeleteProduct = async (productId: number) => {
@@ -334,7 +397,8 @@ export default function AdminPortal() {
     setDescription("");
     setBasePrice(1200);
     setIsCustomizable(true);
-    setUploadedImageUrl("");
+    setUploadedImageUrls([]);
+    setCustomOptions([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -430,6 +494,7 @@ export default function AdminPortal() {
             { id: "payments", label: "Payments Registry", icon: <IndianRupee className="w-4 h-4" /> },
             { id: "featured", label: "Featured Selection", icon: <Sparkles className="w-4 h-4" /> },
             { id: "admins", label: "Admin Users", icon: <UserPlus className="w-4 h-4" /> },
+            { id: "callbacks", label: "Callback Requests", icon: <PhoneCall className="w-4 h-4" /> },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -607,7 +672,7 @@ export default function AdminPortal() {
 
                     {/* Image Upload Input */}
                     <div className="space-y-1.5 border-y border-sandstone-light/15 py-3">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Product Photo</label>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Product Photos (Up to 6)</label>
                       
                       <div className="flex items-center gap-3">
                         <button
@@ -628,11 +693,21 @@ export default function AdminPortal() {
                         accept="image/*"
                       />
 
-                      {/* Display thumbnail */}
-                      {uploadedImageUrl && (
-                        <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-sandstone-light/30 mt-2 bg-cream-dark">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={uploadedImageUrl} alt="Upload Preview" className="w-full h-full object-cover" />
+                      {/* Display thumbnail row */}
+                      {uploadedImageUrls.length > 0 && (
+                        <div className="grid grid-cols-6 gap-2 mt-2">
+                          {uploadedImageUrls.map((url, idx) => (
+                            <div key={idx} className="relative w-12 h-12 rounded-lg overflow-hidden border border-sandstone-light/30 bg-cream-dark">
+                              <img src={url} alt="Upload Preview" className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setUploadedImageUrls(prev => prev.filter((_, i) => i !== idx))}
+                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-700 transition-colors shadow-sm flex items-center justify-center cursor-pointer"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -648,26 +723,144 @@ export default function AdminPortal() {
                     </div>
 
                     {isCustomizable && (
-                      <div className="bg-cream-dark/30 border border-sandstone-light/15 rounded-xl p-3.5 space-y-2">
-                        <p className="text-[9px] font-archivo uppercase font-bold text-coral-accent tracking-wider">Custom Config Builder</p>
-                        
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            value={customOptionName}
-                            onChange={(e) => setCustomOptionName(e.target.value)}
-                            placeholder="Option Label (e.g. Size)"
-                            className="bg-cream-light border border-sandstone-light/35 rounded-lg py-1.5 px-2.5 text-[11px] text-foreground focus:outline-none"
-                          />
-                          <select
-                            value={customOptionType}
-                            onChange={(e) => setCustomOptionType(e.target.value)}
-                            className="bg-cream-light border border-sandstone-light/35 rounded-lg py-1.5 px-2 text-[11px] text-foreground font-semibold"
+                      <div className="bg-cream-dark/30 border border-sandstone-light/15 rounded-xl p-3.5 space-y-4">
+                        <div className="flex justify-between items-center border-b border-sandstone-light/15 pb-2">
+                          <p className="text-[9px] font-archivo uppercase font-bold text-coral-accent tracking-wider">Custom Config Builder</p>
+                          <button
+                            type="button"
+                            onClick={addCustomOption}
+                            className="bg-sandstone-dark text-white font-archivo text-[8px] font-extrabold uppercase px-2 py-1 rounded-lg hover:bg-sandstone-light transition-all cursor-pointer"
                           >
-                            <option value="color_swatch">Color Swatch</option>
-                            <option value="select">Dropdown Select</option>
-                            <option value="text">Text Monogram</option>
-                          </select>
+                            + Add Option
+                          </button>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {customOptions.map((opt, optIdx) => (
+                            <div key={optIdx} className="bg-white border border-sandstone-light/20 p-3 rounded-xl space-y-3">
+                              <div className="grid grid-cols-12 gap-2 items-center">
+                                <div className="col-span-6">
+                                  <input
+                                    type="text"
+                                    value={opt.option_name}
+                                    onChange={(e) => updateCustomOptionName(optIdx, e.target.value)}
+                                    placeholder="Option Label (e.g. Size)"
+                                    className="w-full bg-cream-light/40 border border-sandstone-light/35 rounded-lg py-1 px-2 text-[10px] text-foreground focus:outline-none font-semibold"
+                                  />
+                                </div>
+                                <div className="col-span-5">
+                                  <select
+                                    value={opt.option_type}
+                                    onChange={(e) => updateCustomOptionType(optIdx, e.target.value)}
+                                    className="w-full bg-cream-light/40 border border-sandstone-light/35 rounded-lg py-1 px-1.5 text-[10px] text-foreground font-semibold"
+                                  >
+                                    <option value="color_swatch">Color Swatch</option>
+                                    <option value="select">Dropdown Select</option>
+                                    <option value="text">Text Monogram</option>
+                                  </select>
+                                </div>
+                                <div className="col-span-1 flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeCustomOption(optIdx)}
+                                    className="text-red-500 hover:text-red-700 p-1 cursor-pointer flex items-center justify-center"
+                                  >
+                                    <Trash className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Choices editor based on type */}
+                              {opt.option_type !== "text" ? (
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center text-[9px] font-bold text-olive-dark border-b border-sandstone-light/10 pb-1">
+                                    <span>Choices & Upsells</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => addChoiceToOption(optIdx)}
+                                      className="text-coral-accent hover:underline uppercase text-[8px] cursor-pointer"
+                                    >
+                                      + Add Choice
+                                    </button>
+                                  </div>
+
+                                  <div className="space-y-1.5 max-h-[140px] overflow-y-auto">
+                                    {Array.isArray(opt.choices) && opt.choices.map((c: any, cIdx: number) => (
+                                      <div key={cIdx} className="grid grid-cols-12 gap-1.5 items-center">
+                                        <div className={opt.option_type === "color_swatch" ? "col-span-6" : "col-span-7"}>
+                                          <input
+                                            type="text"
+                                            placeholder="Name (e.g. Indigo)"
+                                            value={c.name}
+                                            onChange={(e) => updateChoiceField(optIdx, cIdx, "name", e.target.value)}
+                                            className="w-full bg-cream-light/30 border border-sandstone-light/30 rounded py-0.5 px-1.5 text-[9px] text-foreground focus:outline-none font-medium"
+                                          />
+                                        </div>
+                                        <div className={opt.option_type === "color_swatch" ? "col-span-3" : "col-span-4"}>
+                                          <input
+                                            type="number"
+                                            placeholder="Addon"
+                                            value={c.price}
+                                            onChange={(e) => updateChoiceField(optIdx, cIdx, "price", Number(e.target.value))}
+                                            className="w-full bg-cream-light/30 border border-sandstone-light/30 rounded py-0.5 px-1.5 text-[9px] text-foreground focus:outline-none font-semibold"
+                                          />
+                                        </div>
+                                        {opt.option_type === "color_swatch" && (
+                                          <div className="col-span-2 flex justify-center">
+                                            <input
+                                              type="color"
+                                              value={c.color || "#000000"}
+                                              onChange={(e) => updateChoiceField(optIdx, cIdx, "color", e.target.value)}
+                                              className="w-5 h-5 rounded border border-sandstone-light/30 cursor-pointer p-0 shrink-0"
+                                            />
+                                          </div>
+                                        )}
+                                        <div className="col-span-1 flex justify-end">
+                                          <button
+                                            type="button"
+                                            onClick={() => removeChoiceFromOption(optIdx, cIdx)}
+                                            className="text-foreground/45 hover:text-red-500 p-0.5 cursor-pointer flex items-center justify-center"
+                                          >
+                                            <X className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-3 gap-1.5 text-[9px]">
+                                  <div>
+                                    <label className="text-[8px] font-bold text-olive-dark block mb-0.5">Placeholder</label>
+                                    <input
+                                      type="text"
+                                      value={opt.choices?.placeholder || ""}
+                                      onChange={(e) => updateTextChoiceField(optIdx, "placeholder", e.target.value)}
+                                      className="w-full bg-cream-light/30 border border-sandstone-light/30 rounded p-1 text-[9px]"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[8px] font-bold text-olive-dark block mb-0.5">Max Length</label>
+                                    <input
+                                      type="number"
+                                      value={opt.choices?.max_len || 10}
+                                      onChange={(e) => updateTextChoiceField(optIdx, "max_len", Number(e.target.value))}
+                                      className="w-full bg-cream-light/30 border border-sandstone-light/30 rounded p-1 text-[9px]"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[8px] font-bold text-olive-dark block mb-0.5">Price Addon</label>
+                                    <input
+                                      type="number"
+                                      value={opt.choices?.price || 0}
+                                      onChange={(e) => updateTextChoiceField(optIdx, "price", Number(e.target.value))}
+                                      className="w-full bg-cream-light/30 border border-sandstone-light/30 rounded p-1 text-[9px]"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -1158,6 +1351,86 @@ export default function AdminPortal() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 8: Callback Requests (Chatbot Callback list) */}
+          {activeTab === "callbacks" && (
+            <div className="space-y-6">
+              <div>
+                <span className="text-coral-accent font-archivo text-xs uppercase tracking-widest font-extrabold">Executive Dashboard</span>
+                <h2 className="font-archivo text-xl uppercase font-bold text-foreground mt-0.5">Callback Requests</h2>
+                <div className="w-12 h-0.5 bg-sandstone-light mt-2" />
+              </div>
+
+              <p className="text-xs text-sandstone-light max-w-2xl leading-relaxed">
+                Review and action callback requests submitted by users through the Help Chatbot. 
+                Mark them as completed after calling the client.
+              </p>
+
+              <div className="bg-white border border-sandstone-light/20 rounded-xl overflow-hidden text-xs shadow-sm">
+                <table className="w-full text-left border-collapse border-spacing-0">
+                  <thead>
+                    <tr className="bg-cream-dark/50 border-b border-sandstone-light/15 font-archivo text-[10px] uppercase font-bold tracking-widest text-olive-dark">
+                      <th className="p-4">Customer Name</th>
+                      <th className="p-4">Phone Number</th>
+                      <th className="p-4">Requested At</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sandstone-light/10">
+                    {callbackRequests && callbackRequests.length > 0 ? (
+                      callbackRequests.map((req: any) => (
+                        <tr key={req.id} className="hover:bg-cream-dark/10 transition-colors">
+                          <td className="p-4 font-semibold text-foreground">{req.user_name}</td>
+                          <td className="p-4 font-mono font-bold text-sandstone-dark">+91 {req.phone}</td>
+                          <td className="p-4 text-foreground/75">{new Date(req.created_at).toLocaleString()}</td>
+                          <td className="p-4">
+                            <span className={`inline-flex items-center gap-1 text-[8px] font-archivo font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                              req.status === "completed"
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : "bg-amber-50 text-amber-700 border border-amber-200 animate-pulse"
+                            }`}>
+                              {req.status}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right">
+                            {req.status === "pending" && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`http://localhost:8000/api/admin/callback-requests/${req.id}`, {
+                                      method: "PUT"
+                                    });
+                                    if (res.ok) {
+                                      loadAllAdminData();
+                                    }
+                                  } catch (err) {
+                                    console.error("Resolve callback request error:", err);
+                                  }
+                                }}
+                                className="bg-[#43472E] hover:bg-olive-dark text-white font-archivo text-[9px] font-extrabold uppercase px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-sm"
+                              >
+                                Mark Called
+                              </button>
+                            )}
+                            {req.status === "completed" && (
+                              <span className="text-[10px] text-green-600 font-bold flex items-center justify-end gap-1">
+                                <Check className="w-3.5 h-3.5" /> Resolved
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-foreground/45 text-center">No callback requests recorded.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

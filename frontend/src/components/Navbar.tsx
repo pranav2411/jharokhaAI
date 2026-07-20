@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { ShoppingBag, User, Compass, History, Menu, X, Landmark, LogOut, Key } from "lucide-react";
+import { Landmark, ShoppingBag, User, Compass, History, Menu, X, LogOut, Key, Settings } from "lucide-react";
 
 export const Navbar: React.FC = () => {
   const { cartCount } = useCart();
@@ -89,13 +89,26 @@ export const Navbar: React.FC = () => {
             {/* Profile Indicator */}
             {currentUser ? (
               <div className="hidden sm:flex items-center space-x-3 border-l border-sandstone-light/30 pl-4">
-                <div className="w-9 h-9 rounded-full bg-olive-dark text-cream-light font-archivo font-bold flex items-center justify-center text-sm border-2 border-sandstone-light/40 shadow-sm">
+                <Link
+                  href="/settings"
+                  title="Edit Settings"
+                  className="w-9 h-9 rounded-full bg-olive-dark hover:bg-olive-light text-cream-light font-archivo font-bold flex items-center justify-center text-sm border-2 border-sandstone-light/40 shadow-sm transition-all"
+                >
                   {getInitials(currentUser.name)}
-                </div>
+                </Link>
                 <div className="text-left">
-                  <p className="text-xs font-semibold text-foreground leading-tight">{currentUser.name}</p>
+                  <Link href="/settings" className="text-xs font-semibold text-foreground leading-tight hover:text-[#737851] transition-colors block">
+                    {currentUser.name}
+                  </Link>
                   <p className="text-[10px] text-olive-dark capitalize leading-tight">{currentUser.role} Profile</p>
                 </div>
+                <Link
+                  href="/settings"
+                  title="Account Settings"
+                  className="p-1.5 rounded-md hover:bg-sandstone-light/10 text-sandstone-light hover:text-[#737851] transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                </Link>
                 <button
                   onClick={logout}
                   title="Logout"
@@ -146,6 +159,15 @@ export const Navbar: React.FC = () => {
           >
             My Orders
           </Link>
+          {currentUser && (
+            <Link
+              href="/settings"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-md hover:bg-sandstone-light/10 font-medium text-foreground transition-colors"
+            >
+              Account Settings
+            </Link>
+          )}
           {currentUser?.role === "admin" && (
             <Link
               href="/admin"

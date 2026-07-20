@@ -3,6 +3,7 @@ import { Archivo, Poppins } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
+import HelpChatbot from "@/components/HelpChatbot";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -35,6 +36,7 @@ export default function RootLayout({
         <AuthProvider>
           <CartProvider>
             {children}
+            <HelpChatbot />
           </CartProvider>
         </AuthProvider>
       </body>

@@ -244,6 +244,9 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
   // Review writing state
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+  const [reviewImage1, setReviewImage1] = useState("");
+  const [reviewImage2, setReviewImage2] = useState("");
+  const [reviewImage3, setReviewImage3] = useState("");
   const [reviewsList, setReviewsList] = useState<any[]>([]);
 
   // UI state
@@ -387,11 +390,18 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
     const activeUserId = currentUser ? currentUser.id : 1;
     const activeUserName = currentUser ? currentUser.name : "Aarav Sharma";
 
+    // Gather images
+    const images: string[] = [];
+    if (reviewImage1.trim()) images.push(reviewImage1.trim());
+    if (reviewImage2.trim()) images.push(reviewImage2.trim());
+    if (reviewImage3.trim()) images.push(reviewImage3.trim());
+
     const newRev = {
       product_id: product.id,
       user_id: activeUserId,
       rating: reviewRating,
       comment: reviewComment,
+      images: images
     };
 
     try {
@@ -408,11 +418,15 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
             id: savedReview.id,
             rating: savedReview.rating,
             comment: savedReview.comment,
+            images: savedReview.images || [],
             user_name: activeUserName,
             created_at: new Date().toISOString(),
           },
         ]);
         setReviewComment("");
+        setReviewImage1("");
+        setReviewImage2("");
+        setReviewImage3("");
       } else {
         // Fallback local append
         setReviewsList((prev) => [
@@ -421,11 +435,15 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
             id: Date.now(),
             rating: reviewRating,
             comment: reviewComment,
+            images: images,
             user_name: activeUserName,
             created_at: new Date().toISOString(),
           },
         ]);
         setReviewComment("");
+        setReviewImage1("");
+        setReviewImage2("");
+        setReviewImage3("");
       }
     } catch (err) {
       console.error("Failed to submit review to server, updating state locally:", err);
@@ -435,11 +453,15 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
           id: Date.now(),
           rating: reviewRating,
           comment: reviewComment,
+          images: images,
           user_name: activeUserName,
           created_at: new Date().toISOString(),
         },
       ]);
       setReviewComment("");
+      setReviewImage1("");
+      setReviewImage2("");
+      setReviewImage3("");
     }
   };
 
@@ -747,6 +769,15 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                       <p className="text-xs text-foreground/80 leading-relaxed">
                         {rev.comment}
                       </p>
+                      {rev.images && rev.images.length > 0 && (
+                        <div className="flex gap-2 mt-2.5">
+                          {rev.images.map((imgUrl: string, imgIdx: number) => (
+                            <a key={imgIdx} href={imgUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-lg overflow-hidden border border-sandstone-light/20 bg-cream-dark/30 hover:scale-105 transition-all">
+                              <img src={imgUrl} alt="Review attachment" className="w-full h-full object-cover" />
+                            </a>
+                          ))}
+                        </div>
+                      )}
                       <p className="text-[10px] text-foreground/40">
                         {new Date(rev.created_at).toLocaleDateString()}
                       </p>
@@ -790,9 +821,34 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                   />
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Attach Photos (Optional URLs)</label>
+                  <input
+                    type="text"
+                    placeholder="Photo URL 1 (e.g. https://...)"
+                    value={reviewImage1}
+                    onChange={(e) => setReviewImage1(e.target.value)}
+                    className="w-full bg-cream-light border border-sandstone-light/40 focus:border-sandstone-dark rounded-xl py-2 px-3 text-xs focus:outline-none text-foreground font-medium"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Photo URL 2 (e.g. https://...)"
+                    value={reviewImage2}
+                    onChange={(e) => setReviewImage2(e.target.value)}
+                    className="w-full bg-cream-light border border-sandstone-light/40 focus:border-sandstone-dark rounded-xl py-2 px-3 text-xs focus:outline-none text-foreground font-medium"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Photo URL 3 (e.g. https://...)"
+                    value={reviewImage3}
+                    onChange={(e) => setReviewImage3(e.target.value)}
+                    className="w-full bg-cream-light border border-sandstone-light/40 focus:border-sandstone-dark rounded-xl py-2 px-3 text-xs focus:outline-none text-foreground font-medium"
+                  />
+                </div>
+
                 <button
                   type="submit"
-                  className="w-full bg-olive-dark hover:bg-olive-light text-white text-xs font-archivo font-extrabold uppercase py-3 rounded-xl transition-all shadow-sm"
+                  className="w-full bg-olive-dark hover:bg-olive-light text-white text-xs font-archivo font-extrabold uppercase py-3 rounded-xl transition-all shadow-sm cursor-pointer"
                 >
                   Submit Review
                 </button>

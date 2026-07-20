@@ -22,6 +22,7 @@ def seed_data():
             email="aarav@jharokha.in",
             role="customer",
             phone="+919876543210",
+            shipping_address="12, Nehru Enclave, Malviya Nagar, New Delhi - 110017",
             password_hash=hash_password("customer123")
         )
         
@@ -30,6 +31,7 @@ def seed_data():
             email="riya@riyacrafts.in",
             role="artisan",
             phone="+919999888877",
+            shipping_address="102, Heritage Residency, Jaipur, Rajasthan - 302017",
             password_hash=hash_password("artisan123")
         )
         
@@ -38,6 +40,7 @@ def seed_data():
             email="mohan@potteryart.in",
             role="artisan",
             phone="+918888777766",
+            shipping_address="15, Blue Pottery Complex, Khurja, Uttar Pradesh - 203131",
             password_hash=hash_password("artisan123")
         )
         
@@ -46,6 +49,7 @@ def seed_data():
             email="kavitha@banarasiweaves.in",
             role="artisan",
             phone="+917777666655",
+            shipping_address="B-4/12, Weaver Colony, Varanasi, Uttar Pradesh - 221001",
             password_hash=hash_password("artisan123")
         )
 
@@ -54,6 +58,7 @@ def seed_data():
             email="pranavkh2411@gmail.com",
             role="admin",
             phone="+919999999999",
+            shipping_address="Admin Chambers, Jharokha HQ, New Delhi - 110001",
             password_hash=hash_password("admin123")
         )
 
