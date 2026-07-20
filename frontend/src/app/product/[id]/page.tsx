@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Star, Settings, ShoppingBag, ArrowLeft, Heart, Check, MapPin, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ProductStudio from "@/components/ProductStudio";
 
 // Local fallbacks in case FastAPI is offline
 const MOCK_PRODUCTS: Record<number, any> = {
@@ -240,6 +241,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
   // Customization selection state
   const [selections, setSelections] = useState<Record<string, any>>({});
   const [textInputs, setTextInputs] = useState<Record<string, string>>({});
+  const [studioActive, setStudioActive] = useState(false);
   
   // Review writing state
   const [reviewRating, setReviewRating] = useState(5);
@@ -487,42 +489,81 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
         {/* Core Product Info */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           
-          {/* Left Side: Images */}
+          {/* Left Side: Images or Customizer Studio */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="bg-cream-dark/40 border border-sandstone-light/15 rounded-3xl overflow-hidden aspect-square shadow-sm flex items-center justify-center relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={selectedImage}
-                alt={product.title}
-                className="w-full h-full object-cover"
-              />
-              
-              {product.is_customizable && (
-                <div className="absolute top-4 left-4 bg-coral-accent text-white py-1 px-2.5 rounded-full text-[9px] font-archivo font-bold uppercase tracking-widest flex items-center gap-1 shadow-md">
-                  <Settings className="w-3 h-3 animate-spin-slow" />
-                  Customized Preview
-                </div>
-              )}
-            </div>
             
-            {/* Gallery Thumbnails */}
-            {product.images && product.images.length > 1 && (
-              <div className="flex gap-3">
-                {product.images.map((img: string, idx: number) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImage(img)}
-                    className={`w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
-                      selectedImage === img
-                        ? "border-sandstone-dark scale-105 shadow-sm"
-                        : "border-transparent opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
+            {/* Customizer Studio Mode Selector */}
+            {product.is_customizable && (
+              <div className="flex bg-cream-dark/50 border border-sandstone-light/15 rounded-2xl p-1 max-w-xs mx-auto mb-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setStudioActive(false)}
+                  className={`flex-grow py-2 px-4 rounded-xl font-bold transition-all uppercase font-archivo text-[10px] tracking-wider cursor-pointer ${
+                    !studioActive
+                      ? "bg-white text-foreground shadow-sm"
+                      : "text-foreground/60 hover:text-foreground"
+                  }`}
+                >
+                  📸 Photos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStudioActive(true)}
+                  className={`flex-grow py-2 px-4 rounded-xl font-bold transition-all uppercase font-archivo text-[10px] tracking-wider cursor-pointer ${
+                    studioActive
+                      ? "bg-white text-foreground shadow-sm"
+                      : "text-foreground/60 hover:text-foreground"
+                  }`}
+                >
+                  🎨 Studio Live
+                </button>
               </div>
+            )}
+
+            {studioActive && product.is_customizable ? (
+              <ProductStudio
+                product={product}
+                selections={selections}
+                textInputs={textInputs}
+              />
+            ) : (
+              <>
+                <div className="bg-cream-dark/40 border border-sandstone-light/15 rounded-3xl overflow-hidden aspect-square shadow-sm flex items-center justify-center relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedImage}
+                    alt={product.title}
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {product.is_customizable && (
+                    <div className="absolute top-4 left-4 bg-coral-accent text-white py-1 px-2.5 rounded-full text-[9px] font-archivo font-bold uppercase tracking-widest flex items-center gap-1 shadow-md">
+                      <Settings className="w-3 h-3 animate-spin-slow" />
+                      Customized Preview
+                    </div>
+                  )}
+                </div>
+                
+                {/* Gallery Thumbnails */}
+                {product.images && product.images.length > 1 && (
+                  <div className="flex gap-3">
+                    {product.images.map((img: string, idx: number) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedImage(img)}
+                        className={`w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                          selectedImage === img
+                            ? "border-sandstone-dark scale-105 shadow-sm"
+                            : "border-transparent opacity-70 hover:opacity-100"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
