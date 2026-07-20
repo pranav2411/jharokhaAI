@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
-import { Landmark, Compass, ShoppingBag, History, FileText, CheckCircle2, Package, Sparkles } from "lucide-react";
+import { Landmark, Compass, ShoppingBag, History, FileText, CheckCircle2, Package, Sparkles, Lock } from "lucide-react";
 import Link from "next/link";
 
 interface OrderItem {
@@ -62,13 +62,18 @@ const MOCK_ORDERS: Order[] = [
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
 
   useEffect(() => {
     async function loadOrders() {
-      const activeUserId = currentUser ? currentUser.id : 1;
+      if (authLoading) return;
+      if (!currentUser) {
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
       try {
-        const res = await fetch(`http://localhost:8000/api/orders/user/${activeUserId}`);
+        const res = await fetch(`http://localhost:8000/api/orders/user/${currentUser.id}`);
         if (res.ok) {
           const data = await res.json();
           // If server is empty, fallback to rich mocks so user has something working
@@ -187,7 +192,25 @@ export default function OrdersPage() {
           </p>
         </div>
 
-        {loading ? (
+        {authLoading ? (
+          <div className="text-center py-20 font-archivo text-sm text-foreground/50 uppercase">
+            Loading authorization session...
+          </div>
+        ) : !currentUser ? (
+          <div className="text-center py-20 bg-cream-dark/20 rounded-3xl border border-dashed border-sandstone-light/35 space-y-4 max-w-lg mx-auto">
+            <Lock className="w-12 h-12 text-sandstone-light mx-auto" />
+            <h3 className="font-archivo text-sm uppercase font-bold text-foreground">Sign In Required</h3>
+            <p className="text-xs text-foreground/60 max-w-xs mx-auto leading-relaxed">
+              Please sign in with your customer or artisan account to view purchase appraisals and order status history.
+            </p>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 bg-[#43472E] hover:bg-olive-dark text-white text-xs font-archivo font-extrabold uppercase px-6 py-3 rounded-xl transition-all shadow-sm"
+            >
+              Go to Login
+            </Link>
+          </div>
+        ) : loading ? (
           <div className="text-center py-20 font-archivo text-sm text-foreground/50 uppercase">
             Fetching order archives...
           </div>
