@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 import os
 import shutil
-from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select, and_
@@ -618,7 +618,7 @@ def create_review(review: models.Review, session: Session = Depends(get_session)
 # --- Admin API Routes ---
 
 @app.post("/api/admin/upload")
-def upload_image(file: UploadFile = File(...)):
+def upload_image(request: Request, file: UploadFile = File(...)):
     # Try to find Next.js frontend directory to save files directly
     paths_to_try = [
         os.path.join("..", "frontend", "public", "uploads"),
@@ -648,7 +648,8 @@ def upload_image(file: UploadFile = File(...)):
         # Next.js can serve it relative to the public directory
         return {"url": f"/uploads/{file.filename}"}
         
-    return {"url": f"http://localhost:8000/static/{file.filename}"}
+    base_url = str(request.base_url).rstrip("/")
+    return {"url": f"{base_url}/static/{file.filename}"}
 
 @app.put("/api/admin/products/{product_id}")
 def update_product(
