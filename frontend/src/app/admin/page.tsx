@@ -226,44 +226,23 @@ export default function AdminPortal() {
     if (!file) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const res = await fetch(`${API_URL}/api/admin/upload`, {
-        method: "POST",
-        body: formData,
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUploadedImageUrls(prev => {
+        if (prev.length >= 6) {
+          alert("Maximum 6 images are allowed.");
+          return prev;
+        }
+        return [...prev, reader.result as string];
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        setUploadedImageUrls(prev => {
-          if (prev.length >= 6) {
-            alert("Maximum 6 images are allowed.");
-            return prev;
-          }
-          return [...prev, data.url];
-        });
-      } else {
-        alert("Upload failed. Make sure FastAPI server is running with python-multipart.");
-      }
-    } catch (err) {
-      console.error("Upload error:", err);
-      // Fallback: Read file locally as base64 to allow offline dev previews!
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUploadedImageUrls(prev => {
-          if (prev.length >= 6) {
-            alert("Maximum 6 images are allowed.");
-            return prev;
-          }
-          return [...prev, reader.result as string];
-        });
-      };
-      reader.readAsDataURL(file);
-    } finally {
       setIsUploading(false);
-    }
+    };
+    reader.onerror = (err) => {
+      console.error("FileReader error:", err);
+      setIsUploading(false);
+      alert("Failed to read file.");
+    };
+    reader.readAsDataURL(file);
   };
 
   // Submit Form (Add / Edit Product)
