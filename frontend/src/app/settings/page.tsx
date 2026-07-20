@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
 import { Settings, User, Mail, Phone, MapPin, Lock, ShieldCheck, AlertCircle, Save } from "lucide-react";
 import Link from "next/link";
+import { API_URL } from "@/config";
 
 export default function SettingsPage() {
   const { currentUser, loading: authLoading, updateCurrentUser } = useAuth();
@@ -38,7 +39,7 @@ export default function SettingsPage() {
     setIsSaving(true);
 
     try {
-      const res = await fetch("http://localhost:8000/api/users/profile", {
+      const res = await fetch(`${API_URL}/api/users/profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

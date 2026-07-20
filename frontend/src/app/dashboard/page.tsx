@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Settings, Plus, LayoutDashboard, FileText, CheckCircle2, AlertCircle, ShoppingBag } from "lucide-react";
 import Link from "next/link";
+import { API_URL } from "@/config";
 
 interface Product {
   id: number;
@@ -37,7 +38,7 @@ export default function ArtisanDashboard() {
 
   const loadProducts = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/products?artisan_id=1"); // Mock artisan Riya
+      const res = await fetch(`${API_URL}/api/products?artisan_id=1`); // Mock artisan Riya
       if (res.ok) {
         const data = await res.json();
         setProducts(data);
@@ -101,7 +102,7 @@ export default function ArtisanDashboard() {
     };
 
     try {
-      const res = await fetch("http://localhost:8000/api/products", {
+      const res = await fetch(`${API_URL}/api/products`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

@@ -6,6 +6,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Search, Settings, SlidersHorizontal, Grid, RotateCcw } from "lucide-react";
 import Link from "next/link";
+import { API_URL } from "@/config";
 
 interface Product {
   id: number;
@@ -121,7 +122,7 @@ function CatalogContent() {
   useEffect(() => {
     async function loadProducts() {
       try {
-        const res = await fetch("http://localhost:8000/api/products");
+        const res = await fetch(`${API_URL}/api/products`);
         if (res.ok) {
           const data = await res.json();
           setProducts(data);

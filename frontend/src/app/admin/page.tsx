@@ -10,6 +10,7 @@ import {
   UserPlus, Shield, PhoneCall, Trash, X
 } from "lucide-react";
 import Link from "next/link";
+import { API_URL } from "@/config";
 
 interface Product {
   id?: number;
@@ -166,7 +167,7 @@ export default function AdminPortal() {
       setLoading(true);
       
       // Fetch Products
-      const prodRes = await fetch("http://localhost:8000/api/products");
+      const prodRes = await fetch(`${API_URL}/api/products`);
       if (prodRes.ok) {
         const prodData = await prodRes.json();
         setProducts(prodData);
@@ -175,35 +176,35 @@ export default function AdminPortal() {
       }
       
       // Fetch Orders
-      const orderRes = await fetch("http://localhost:8000/api/admin/orders");
+      const orderRes = await fetch(`${API_URL}/api/admin/orders`);
       if (orderRes.ok) {
         const orderData = await orderRes.json();
         setOrders(orderData);
       }
 
       // Fetch Reviews
-      const revRes = await fetch("http://localhost:8000/api/admin/reviews");
+      const revRes = await fetch(`${API_URL}/api/admin/reviews`);
       if (revRes.ok) {
         const revData = await revRes.json();
         setReviews(revData);
       }
 
       // Fetch Payments Analytics
-      const payRes = await fetch("http://localhost:8000/api/admin/payments");
+      const payRes = await fetch(`${API_URL}/api/admin/payments`);
       if (payRes.ok) {
         const payData = await payRes.json();
         setPayments(payData);
       }
 
       // Fetch Users
-      const usersRes = await fetch("http://localhost:8000/api/admin/users");
+      const usersRes = await fetch(`${API_URL}/api/admin/users`);
       if (usersRes.ok) {
         const usersData = await usersRes.json();
         setUsers(usersData);
       }
 
       // Fetch Chatbot Callback Requests
-      const callbacksRes = await fetch("http://localhost:8000/api/admin/callback-requests");
+      const callbacksRes = await fetch(`${API_URL}/api/admin/callback-requests`);
       if (callbacksRes.ok) {
         const callbacksData = await callbacksRes.json();
         setCallbackRequests(callbacksData);
@@ -229,7 +230,7 @@ export default function AdminPortal() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:8000/api/admin/upload", {
+      const res = await fetch(`${API_URL}/api/admin/upload`, {
         method: "POST",
         body: formData,
       });
@@ -291,14 +292,14 @@ export default function AdminPortal() {
       let res;
       if (editingId) {
         // Edit existing
-        res = await fetch(`http://localhost:8000/api/admin/products/${editingId}`, {
+        res = await fetch(`${API_URL}/api/admin/products/${editingId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
       } else {
         // Add new
-        res = await fetch("http://localhost:8000/api/products", {
+        res = await fetch(`${API_URL}/api/products`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -343,7 +344,7 @@ export default function AdminPortal() {
     if (!confirm("Are you sure you want to delete this creation listing?")) return;
 
     try {
-      const res = await fetch(`http://localhost:8000/api/admin/products/${productId}`, {
+      const res = await fetch(`${API_URL}/api/admin/products/${productId}`, {
         method: "DELETE"
       });
       if (res.ok) {
@@ -358,7 +359,7 @@ export default function AdminPortal() {
   // Update Order Status
   const handleUpdateOrderStatus = async (orderId: number, status: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/admin/orders/${orderId}/status`, {
+      const res = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status })
@@ -379,7 +380,7 @@ export default function AdminPortal() {
     if (!confirm("Are you sure you want to delete/moderate this review?")) return;
 
     try {
-      const res = await fetch(`http://localhost:8000/api/admin/reviews/${reviewId}`, {
+      const res = await fetch(`${API_URL}/api/admin/reviews/${reviewId}`, {
         method: "DELETE"
       });
       if (res.ok) {
@@ -1179,7 +1180,7 @@ export default function AdminPortal() {
                       return;
                     }
                     try {
-                      const res = await fetch("http://localhost:8000/api/admin/featured-products", {
+                      const res = await fetch(`${API_URL}/api/admin/featured-products`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ product_ids: featuredIds })
@@ -1232,7 +1233,7 @@ export default function AdminPortal() {
                     e.preventDefault();
                     setAdminFeedback(null);
                     try {
-                      const res = await fetch("http://localhost:8000/api/admin/create-admin", {
+                      const res = await fetch(`${API_URL}/api/admin/create-admin`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -1401,7 +1402,7 @@ export default function AdminPortal() {
                               <button
                                 onClick={async () => {
                                   try {
-                                    const res = await fetch(`http://localhost:8000/api/admin/callback-requests/${req.id}`, {
+                                    const res = await fetch(`${API_URL}/api/admin/callback-requests/${req.id}`, {
                                       method: "PUT"
                                     });
                                     if (res.ok) {

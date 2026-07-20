@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { MessageCircle, X, Send, PhoneCall, Check, ArrowRight } from "lucide-react";
+import { API_URL } from "@/config";
 
 interface Message {
   sender: "bot" | "user";
@@ -59,7 +60,7 @@ export default function HelpChatbot() {
     if (!phoneInput.trim()) return;
 
     try {
-      const res = await fetch("http://localhost:8000/api/chatbot/callback-request", {
+      const res = await fetch(`${API_URL}/api/chatbot/callback-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

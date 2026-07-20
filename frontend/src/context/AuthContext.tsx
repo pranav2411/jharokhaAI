@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { API_URL } from "@/config";
 
 export interface User {
   id: number;
@@ -42,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
-    const res = await fetch("http://localhost:8000/api/auth/login", {
+    const res = await fetch(`${API_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -60,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginPhone = async (phone: string, code?: string): Promise<{ otpSent: boolean; user?: User; message?: string }> => {
-    const res = await fetch("http://localhost:8000/api/auth/login-phone", {
+    const res = await fetch(`${API_URL}/api/auth/login-phone`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone, code }),
@@ -83,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginGoogle = async (email: string, name: string): Promise<User> => {
-    const res = await fetch("http://localhost:8000/api/auth/login-google", {
+    const res = await fetch(`${API_URL}/api/auth/login-google`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, name }),
@@ -107,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     phone: string,
     acceptTerms: boolean
   ): Promise<User> => {
-    const res = await fetch("http://localhost:8000/api/auth/register", {
+    const res = await fetch(`${API_URL}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password, phone, accept_terms: acceptTerms }),

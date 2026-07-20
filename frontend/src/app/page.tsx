@@ -7,6 +7,7 @@ import { JharokhaCard } from "@/components/JharokhaCard";
 import { TrustBar } from "@/components/TrustBar";
 import Link from "next/link";
 import { ArrowRight, Sparkles, Landmark, Compass } from "lucide-react";
+import { API_URL } from "@/config";
 
 // Mock fallbacks in case FastAPI is offline during initial load
 const FALLBACK_PRODUCTS = [
@@ -98,7 +99,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchFeatured() {
       try {
-        const res = await fetch("http://localhost:8000/api/products/featured");
+        const res = await fetch(`${API_URL}/api/products/featured`);
         if (res.ok) {
           const data = await res.json();
           setProducts(data);

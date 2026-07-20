@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { API_URL } from "@/config";
 
 export interface CartItem {
   id: number;
@@ -39,7 +40,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const activeUserId = currentUser ? currentUser.id : 1;
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:8000/api/cart/${activeUserId}`);
+      const res = await fetch(`${API_URL}/api/cart/${activeUserId}`);
       if (res.ok) {
         const data = await res.json();
         setCart(data);
@@ -73,7 +74,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addToCart = async (productId: number, qty: number, customizations: Record<string, any>) => {
     const activeUserId = currentUser ? currentUser.id : 1;
     try {
-      const res = await fetch("http://localhost:8000/api/cart", {
+      const res = await fetch(`${API_URL}/api/cart`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -127,7 +128,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     try {
-      const res = await fetch(`http://localhost:8000/api/cart/${cartItemId}`, {
+      const res = await fetch(`${API_URL}/api/cart/${cartItemId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ qty }),
@@ -145,7 +146,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeFromCart = async (cartItemId: number) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/cart/${cartItemId}`, {
+      const res = await fetch(`${API_URL}/api/cart/${cartItemId}`, {
         method: "DELETE",
       });
       if (res.ok) {

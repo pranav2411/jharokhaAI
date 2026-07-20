@@ -9,6 +9,7 @@ import { Star, Settings, ShoppingBag, ArrowLeft, Heart, Check, MapPin, Sparkles 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProductStudio from "@/components/ProductStudio";
+import { API_URL } from "@/config";
 
 // Local fallbacks in case FastAPI is offline
 const MOCK_PRODUCTS: Record<number, any> = {
@@ -258,7 +259,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
   useEffect(() => {
     async function getDetails() {
       try {
-        const res = await fetch(`http://localhost:8000/api/products/${productId}`);
+        const res = await fetch(`${API_URL}/api/products/${productId}`);
         if (res.ok) {
           const data = await res.json();
           setProduct(data);
@@ -407,7 +408,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
     };
 
     try {
-      const res = await fetch("http://localhost:8000/api/reviews", {
+      const res = await fetch(`${API_URL}/api/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newRev),

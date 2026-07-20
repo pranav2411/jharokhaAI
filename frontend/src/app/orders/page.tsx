@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
 import { Landmark, Compass, ShoppingBag, History, FileText, CheckCircle2, Package, Sparkles, Lock } from "lucide-react";
 import Link from "next/link";
+import { API_URL } from "@/config";
 
 interface OrderItem {
   id: number;
@@ -73,7 +74,7 @@ export default function OrdersPage() {
         return;
       }
       try {
-        const res = await fetch(`http://localhost:8000/api/orders/user/${currentUser.id}`);
+        const res = await fetch(`${API_URL}/api/orders/user/${currentUser.id}`);
         if (res.ok) {
           const data = await res.json();
           // If server is empty, fallback to rich mocks so user has something working

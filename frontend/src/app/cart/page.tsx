@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ShoppingBag, Trash2, Plus, Minus, Landmark, ShieldCheck, MapPin, X, ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { API_URL } from "@/config";
 
 export default function CartPage() {
   const router = useRouter();
@@ -47,7 +48,7 @@ export default function CartPage() {
     // Simulate 2s payment delay
     setTimeout(async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/orders", {
+        const res = await fetch(`${API_URL}/api/orders`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(orderPayload)
