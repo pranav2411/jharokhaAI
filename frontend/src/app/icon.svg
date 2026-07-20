@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Jharokha Arched Window Outer Frame -->
+  <path d="M 6,30 L 6,14 C 6,8 10,2 16,2 C 22,2 26,8 26,14 L 26,30 Z" fill="#737851" />
+  
+  <!-- Jharokha Inner Window Pane -->
+  <path d="M 8,28 L 8,14 C 8,9.5 11,4.5 16,4.5 C 21,4.5 24,9.5 24,14 L 24,28 Z" fill="#fcfaf7" />
+  
+  <!-- Letter S Logo in the Center -->
+  <text 
+    x="16" 
+    y="20.5" 
+    text-anchor="middle" 
+    font-family="Georgia, serif" 
+    font-weight="900" 
+    font-size="14" 
+    fill="#C99A5B"
+  >S</text>
+  
+  <!-- Arch base trim -->
+  <rect x="4" y="28" width="24" height="2" fill="#C99A5B" rx="0.5" />
+</svg>

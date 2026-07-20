@@ -251,6 +251,59 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
   };
 
   // -------------------------------------------------------------------------
+  // GENERATIVE TEMPLATE 2.5: Handwoven Baskets
+  // -------------------------------------------------------------------------
+  const renderJuteBasket = () => {
+    const liningOption = selections["Lining Fabric Selection"] || selections["Lining Fabric & Color"] || selections["Lining Selection"];
+    const liningName = liningOption?.name || "Natural Cane / No Lining";
+    const liningColor = liningOption?.color || "#E6C280";
+
+    return (
+      <div className="space-y-4 w-full flex flex-col items-center">
+        <svg viewBox="0 0 400 350" className="w-full max-h-[350px] drop-shadow-2xl">
+          <defs>
+            <pattern id="weave" width="20" height="20" patternUnits="userSpaceOnUse">
+              <rect width="20" height="20" fill="#dfbe9b" />
+              <path d="M 0,10 L 20,10 M 10,0 L 10,20" stroke="#b28d65" strokeWidth="2" />
+            </pattern>
+          </defs>
+
+          <ellipse cx="200" cy="290" rx="120" ry="20" fill="rgba(0, 0, 0, 0.2)" />
+
+          {/* Leather Handle Straps */}
+          <path d="M 120,130 C 110,60 150,60 140,130" fill="none" stroke="#7a421b" strokeWidth="12" strokeLinecap="round" />
+          <path d="M 280,130 C 290,60 250,60 260,130" fill="none" stroke="#7a421b" strokeWidth="12" strokeLinecap="round" />
+          <circle cx="130" cy="122" r="4" fill="#ffd700" />
+          <circle cx="270" cy="122" r="4" fill="#ffd700" />
+
+          {/* Basket Body */}
+          <path d="M 110,130 L 290,130 L 270,280 L 130,280 Z" fill="url(#weave)" stroke="#8e6a45" strokeWidth="2" />
+
+          {/* Fabric Lining Overhang */}
+          <path d="M 100,130 C 120,150 160,150 180,130 C 200,150 240,150 260,130 C 280,150 295,140 300,130 C 300,120 100,120 100,130 Z" 
+            fill={liningColor} 
+            stroke="#b39d82" 
+            strokeWidth="1" 
+          />
+          
+          <path d="M 110,130 Q 200,140 290,130" fill="none" stroke="#66492e" strokeWidth="2" strokeDasharray="3,3" />
+        </svg>
+
+        <div className="bg-cream-dark/30 rounded-xl p-3 border border-sandstone-light/10 text-[10px] text-foreground/80 max-w-sm flex items-start gap-2 text-left w-full">
+          <Sparkles className="w-4 h-4 text-coral-accent shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">Live Preview: Handwoven Basket</p>
+            <p className="mt-0.5">
+              Visualizing the interior lined with <strong>{liningName}</strong> fabric. 
+              The basket handles are reinforced with tanned bridle leather.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // -------------------------------------------------------------------------
   // GENERATIVE TEMPLATE 3: Woodwork & Bamboo (Boxes, Trays, Furniture)
   // -------------------------------------------------------------------------
   const renderWoodworkTemplate = () => {
@@ -460,13 +513,20 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
       return renderTextileTemplate();
     }
     
+    // Route matching Basket products
+    if (
+      titleLower.includes("basket") || 
+      titleLower.includes("bamboo") || 
+      titleLower.includes("jute")
+    ) {
+      return renderJuteBasket();
+    }
+    
     // Route matching Woodwork products
     if (
       categorySlug === "woodwork" || 
       titleLower.includes("box") || 
-      titleLower.includes("basket") || 
       titleLower.includes("table") || 
-      titleLower.includes("bamboo") || 
       titleLower.includes("wood")
     ) {
       return renderWoodworkTemplate();
