@@ -1,6 +1,10 @@
+import hashlib
 from sqlmodel import Session, select
 from database import engine, init_db
 import models
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
 
 def seed_data():
     init_db()
@@ -17,31 +21,43 @@ def seed_data():
             name="Aarav Sharma",
             email="aarav@jharokha.in",
             role="customer",
-            phone="+919876543210"
+            phone="+919876543210",
+            password_hash=hash_password("customer123")
         )
         
         artisan_user1 = models.User(
             name="Riya Sen",
             email="riya@riyacrafts.in",
             role="artisan",
-            phone="+919999888877"
+            phone="+919999888877",
+            password_hash=hash_password("artisan123")
         )
         
         artisan_user2 = models.User(
             name="Mohan Lal",
             email="mohan@potteryart.in",
             role="artisan",
-            phone="+918888777766"
+            phone="+918888777766",
+            password_hash=hash_password("artisan123")
         )
         
         artisan_user3 = models.User(
             name="Kavitha Prasad",
             email="kavitha@banarasiweaves.in",
             role="artisan",
-            phone="+917777666655"
+            phone="+917777666655",
+            password_hash=hash_password("artisan123")
         )
 
-        session.add_all([customer, artisan_user1, artisan_user2, artisan_user3])
+        admin = models.User(
+            name="Pranav Khandelwal",
+            email="pranavkh2411@gmail.com",
+            role="admin",
+            phone="+919999999999",
+            password_hash=hash_password("admin123")
+        )
+
+        session.add_all([customer, artisan_user1, artisan_user2, artisan_user3, admin])
         session.commit()
         
         # Refresh to get IDs
@@ -108,6 +124,7 @@ def seed_data():
             description="Our signature basket is handwoven from wild bamboo splits, showcasing natural brown and golden tones. It features a sturdy construction perfect for logs, blankets, toys, or as a decorative planter sleeve.",
             base_price=899.0,
             is_customizable=True,
+            is_featured=True,
             stock_qty=15,
             images=[
                 "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=600&auto=format&fit=crop&q=80",
@@ -160,6 +177,7 @@ def seed_data():
             description="Adorned with traditional hand-painted floral motifs in vibrant cobalt blue, turquoise, and mustard, this earthenware vase is glazed to a high gloss. Represents centuries-old Mughal design aesthetics.",
             base_price=1249.0,
             is_customizable=True,
+            is_featured=True,
             stock_qty=8,
             images=[
                 "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80",
@@ -201,6 +219,7 @@ def seed_data():
             description="Woven with pure Katan silk warp and weft, this dupatta is intricately decorated with gold (Sona) and silver (Rupa) zari work in a traditional shikargah design. Drapes beautifully and shimmers in changing light.",
             base_price=4500.0,
             is_customizable=True,
+            is_featured=True,
             stock_qty=5,
             images=[
                 "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&auto=format&fit=crop&q=80"
@@ -273,6 +292,7 @@ def seed_data():
             description="Crafted from premium Sheesham wood (Indian Rosewood) and inlaid with delicate acrylic and brass wire motifs, this box features red velvet lining and a secret brass latch.",
             base_price=1650.0,
             is_customizable=True,
+            is_featured=True,
             stock_qty=6,
             images=[
                 "https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?w=600&auto=format&fit=crop&q=80"

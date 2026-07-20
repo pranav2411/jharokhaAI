@@ -4,6 +4,7 @@ import React, { useEffect, useState, use } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { Star, Settings, ShoppingBag, ArrowLeft, Heart, Check, MapPin, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -229,6 +230,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
   const productId = parseInt(idStr) || 1;
 
   const { addToCart } = useCart();
+  const { currentUser } = useAuth();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
@@ -382,9 +384,12 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
     e.preventDefault();
     if (!reviewComment.trim()) return;
 
+    const activeUserId = currentUser ? currentUser.id : 1;
+    const activeUserName = currentUser ? currentUser.name : "Aarav Sharma";
+
     const newRev = {
       product_id: product.id,
-      user_id: 1, // Mock user Aarav
+      user_id: activeUserId,
       rating: reviewRating,
       comment: reviewComment,
     };
@@ -403,7 +408,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
             id: savedReview.id,
             rating: savedReview.rating,
             comment: savedReview.comment,
-            user_name: "Aarav Sharma", // Seeded local name
+            user_name: activeUserName,
             created_at: new Date().toISOString(),
           },
         ]);
@@ -416,7 +421,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
             id: Date.now(),
             rating: reviewRating,
             comment: reviewComment,
-            user_name: "Aarav Sharma",
+            user_name: activeUserName,
             created_at: new Date().toISOString(),
           },
         ]);
@@ -430,7 +435,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
           id: Date.now(),
           rating: reviewRating,
           comment: reviewComment,
-          user_name: "Aarav Sharma",
+          user_name: activeUserName,
           created_at: new Date().toISOString(),
         },
       ]);

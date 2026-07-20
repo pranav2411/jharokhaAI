@@ -1,0 +1,547 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
+import { 
+  Mail, Lock, User as UserIcon, Phone, Chrome, 
+  ShieldCheck, ArrowRight, Sparkles, CheckCircle2, 
+  AlertCircle, Shield, Key 
+} from "lucide-react";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { login, loginPhone, loginGoogle, register } = useAuth();
+  
+  // View state: 'login' | 'register'
+  const [mode, setMode] = useState<"login" | "register">("login");
+  // Login sub-method: 'credentials' | 'phone' | 'google'
+  const [loginMethod, setLoginMethod] = useState<"credentials" | "phone" | "google">("credentials");
+
+  // Form states
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [phoneVal, setPhoneVal] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  
+  // Phone OTP States
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpMessage, setOtpMessage] = useState("");
+
+  // Feedback states
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  // Modals for policy view
+  const [policyType, setPolicyType] = useState<"privacy" | "terms" | null>(null);
+
+  const resetMessages = () => {
+    setErrorMsg("");
+    setSuccessMsg("");
+  };
+
+  const handleCredentialsLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    resetMessages();
+    setLoading(true);
+    try {
+      const user = await login(email, password);
+      setSuccessMsg(`Welcome back, ${user.name}!`);
+      setTimeout(() => {
+        router.push(user.role === "admin" ? "/admin" : "/");
+      }, 1000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Invalid email or password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePhoneLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    resetMessages();
+    setLoading(true);
+    try {
+      if (!otpSent) {
+        // Send OTP request
+        const res = await loginPhone(phoneVal);
+        if (res.otpSent) {
+          setOtpSent(true);
+          setOtpMessage(res.message || "OTP code sent!");
+        }
+      } else {
+        // Verify OTP code
+        const res = await loginPhone(phoneVal, otpCode);
+        if (res.user) {
+          setSuccessMsg(`Welcome, logged in successfully!`);
+          setTimeout(() => {
+            router.push(res.user?.role === "admin" ? "/admin" : "/");
+          }, 1000);
+        }
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to login with phone.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (googleEmail: string, googleName: string) => {
+    resetMessages();
+    setLoading(true);
+    try {
+      const user = await loginGoogle(googleEmail, googleName);
+      setSuccessMsg(`Logged in via Google as ${user.name}`);
+      setTimeout(() => {
+        router.push(user.role === "admin" ? "/admin" : "/");
+      }, 1000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Google authentication failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    resetMessages();
+    
+    if (!acceptTerms) {
+      setErrorMsg("You must accept the Terms & Conditions.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const user = await register(name, email, password, phoneVal, acceptTerms);
+      setSuccessMsg(`Account created successfully! Welcome, ${user.name}.`);
+      setTimeout(() => {
+        router.push(user.role === "admin" ? "/admin" : "/");
+      }, 1500);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Registration failed. Try a different email.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-cream-light">
+      <Navbar />
+
+      <main className="flex-grow flex items-center justify-center py-16 px-4">
+        <div className="w-full max-w-lg bg-white border border-sandstone-light/35 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
+          {/* Header Banner */}
+          <div className="bg-[#43472E] px-8 py-6 text-center text-cream-light border-b border-sandstone-dark relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10 bg-jaali-dark pointer-events-none" />
+            <div className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full text-[10px] tracking-widest uppercase mb-2 text-cream-light/80 font-bold border border-white/15">
+              <Sparkles className="w-3.5 h-3.5 text-[#F3E9DA]" />
+              Jharokha Heritage Portal
+            </div>
+            <h2 className="font-archivo text-2xl sm:text-3xl font-black uppercase text-white tracking-wide">
+              {mode === "login" ? "Sign In" : "Create Account"}
+            </h2>
+            <p className="text-xs text-cream-light/80 mt-1 max-w-sm mx-auto">
+              {mode === "login" 
+                ? "Access your customized dashboard, orders, and cart." 
+                : "Join our community to empower artisans and customize products."
+              }
+            </p>
+          </div>
+
+          <div className="p-8">
+            {/* Feedback Banners */}
+            {errorMsg && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-3 animate-shake">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <span className="font-medium">{errorMsg}</span>
+              </div>
+            )}
+            {successMsg && (
+              <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl flex items-center gap-3 animate-fade-in">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                <span className="font-semibold">{successMsg}</span>
+              </div>
+            )}
+
+            {/* TAB TOGGLES: LOGIN vs REGISTER */}
+            <div className="flex border-b border-sandstone-light/30 mb-8 p-1 bg-cream-light/40 rounded-lg">
+              <button
+                onClick={() => { setMode("login"); resetMessages(); }}
+                className={`flex-1 py-2 text-xs uppercase tracking-wider font-bold rounded-md transition-all ${
+                  mode === "login" 
+                    ? "bg-white text-sandstone-dark shadow-sm border border-sandstone-light/20" 
+                    : "text-sandstone-light hover:text-sandstone-dark"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => { setMode("register"); resetMessages(); }}
+                className={`flex-1 py-2 text-xs uppercase tracking-wider font-bold rounded-md transition-all ${
+                  mode === "register" 
+                    ? "bg-white text-sandstone-dark shadow-sm border border-sandstone-light/20" 
+                    : "text-sandstone-light hover:text-sandstone-dark"
+                }`}
+              >
+                Register
+              </button>
+            </div>
+
+            {/* LOGIN OPTIONS SUB-TABS */}
+            {mode === "login" && (
+              <div className="grid grid-cols-3 gap-2 mb-6">
+                <button
+                  onClick={() => setLoginMethod("credentials")}
+                  className={`py-2 text-[10px] uppercase font-bold tracking-wider rounded-lg border transition-all ${
+                    loginMethod === "credentials"
+                      ? "bg-olive-dark text-white border-olive-dark"
+                      : "bg-white text-sandstone-dark border-sandstone-light/30 hover:bg-cream-light/35"
+                  }`}
+                >
+                  Password
+                </button>
+                <button
+                  onClick={() => setLoginMethod("phone")}
+                  className={`py-2 text-[10px] uppercase font-bold tracking-wider rounded-lg border transition-all ${
+                    loginMethod === "phone"
+                      ? "bg-olive-dark text-white border-olive-dark"
+                      : "bg-white text-sandstone-dark border-sandstone-light/30 hover:bg-cream-light/35"
+                  }`}
+                >
+                  Phone OTP
+                </button>
+                <button
+                  onClick={() => setLoginMethod("google")}
+                  className={`py-2 text-[10px] uppercase font-bold tracking-wider rounded-lg border transition-all ${
+                    loginMethod === "google"
+                      ? "bg-olive-dark text-white border-olive-dark"
+                      : "bg-white text-sandstone-dark border-sandstone-light/30 hover:bg-cream-light/35"
+                  }`}
+                >
+                  Google
+                </button>
+              </div>
+            )}
+
+            {/* FORM AREA */}
+            {mode === "login" ? (
+              <>
+                {/* Method 1: Email / Password Credentials */}
+                {loginMethod === "credentials" && (
+                  <form onSubmit={handleCredentialsLogin} className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">Email Address</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-3 w-4 h-4 text-sandstone-light" />
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="e.g. customer@jharokha.in"
+                          className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">Password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-3 w-4 h-4 text-sandstone-light" />
+                        <input
+                          type="password"
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-coral-accent hover:bg-coral-dark text-white font-bold py-3 rounded-xl shadow-md transition-all duration-300 mt-4 flex items-center justify-center gap-2"
+                    >
+                      {loading ? "Signing in..." : "Continue"}
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </form>
+                )}
+
+                {/* Method 2: Phone Login */}
+                {loginMethod === "phone" && (
+                  <form onSubmit={handlePhoneLogin} className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">Phone Number</label>
+                      <div className="relative">
+                        <Phone className="absolute left-3.5 top-3 w-4 h-4 text-sandstone-light" />
+                        <input
+                          type="tel"
+                          required
+                          disabled={otpSent}
+                          value={phoneVal}
+                          onChange={(e) => setPhoneVal(e.target.value)}
+                          placeholder="e.g. +919876543210"
+                          className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    {otpSent && (
+                      <div className="animate-fade-in space-y-4">
+                        <div className="p-3 bg-olive-light/10 text-olive-dark text-[11px] rounded-lg border border-olive-light/20 flex items-start gap-2">
+                          <CheckCircle2 className="w-4 h-4 mt-0.5 text-olive-dark flex-shrink-0" />
+                          <span>{otpMessage}</span>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">Verification Code (OTP)</label>
+                          <div className="relative">
+                            <Key className="absolute left-3.5 top-3 w-4 h-4 text-sandstone-light" />
+                            <input
+                              type="text"
+                              required
+                              value={otpCode}
+                              onChange={(e) => setOtpCode(e.target.value)}
+                              placeholder="123456"
+                              className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm text-center font-bold tracking-widest focus:outline-none focus:border-coral-accent transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-coral-accent hover:bg-coral-dark text-white font-bold py-3 rounded-xl shadow-md transition-all duration-300 mt-4 flex items-center justify-center gap-2"
+                    >
+                      {loading ? "Processing..." : (otpSent ? "Verify & Sign In" : "Send OTP")}
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </form>
+                )}
+
+                {/* Method 3: Google Login */}
+                {loginMethod === "google" && (
+                  <div className="space-y-4 py-4 text-center">
+                    <p className="text-xs text-sandstone-light mb-6">
+                      For this demonstration, choose one of the simulated Google accounts below:
+                    </p>
+                    
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => handleGoogleLogin("pranavkh2411@gmail.com", "Pranav Khandelwal")}
+                        className="w-full bg-white border border-sandstone-light/35 text-sandstone-dark hover:bg-cream-light/20 font-medium py-3 px-4 rounded-xl shadow-sm flex items-center justify-center gap-3 transition-colors"
+                      >
+                        <Chrome className="w-4 h-4 text-[#4285F4]" />
+                        <span>Pranav Khandelwal (Admin)</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleGoogleLogin("aarav@jharokha.in", "Aarav Sharma")}
+                        className="w-full bg-white border border-sandstone-light/35 text-sandstone-dark hover:bg-cream-light/20 font-medium py-3 px-4 rounded-xl shadow-sm flex items-center justify-center gap-3 transition-colors"
+                      >
+                        <Chrome className="w-4 h-4 text-[#4285F4]" />
+                        <span>Aarav Sharma (Customer)</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleGoogleLogin("guestuser@gmail.com", "Guest Explorer")}
+                        className="w-full bg-white border border-sandstone-light/35 text-sandstone-dark hover:bg-cream-light/20 font-medium py-3 px-4 rounded-xl shadow-sm flex items-center justify-center gap-3 transition-colors"
+                      >
+                        <Chrome className="w-4 h-4 text-[#4285F4]" />
+                        <span>Guest Explorer (New Account)</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* REGISTRATION FORM */
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">Full Name</label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3.5 top-3 w-4 h-4 text-sandstone-light" />
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Aarav Sharma"
+                      className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-3 w-4 h-4 text-sandstone-light" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. aarav@jharokha.in"
+                      className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">Phone Number (Optional)</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3.5 top-3 w-4 h-4 text-sandstone-light" />
+                    <input
+                      type="tel"
+                      value={phoneVal}
+                      onChange={(e) => setPhoneVal(e.target.value)}
+                      placeholder="e.g. +919876543210"
+                      className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-3 w-4 h-4 text-sandstone-light" />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Min. 8 characters"
+                      className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* TERMS & CONDITIONS COMPLIANCE */}
+                <div className="bg-cream-light/30 border border-sandstone-light/20 p-4 rounded-xl space-y-3">
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      id="terms-checkbox"
+                      type="checkbox"
+                      required
+                      checked={acceptTerms}
+                      onChange={(e) => setAcceptTerms(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-sandstone-light/40 text-coral-accent focus:ring-coral-accent cursor-pointer"
+                    />
+                    <label htmlFor="terms-checkbox" className="text-[11px] text-sandstone-dark leading-normal cursor-pointer">
+                      I agree to the Jharokha Artisan Marketplace{" "}
+                      <button 
+                        type="button" 
+                        onClick={() => setPolicyType("terms")}
+                        className="text-coral-accent font-bold hover:underline"
+                      >
+                        Terms of Service
+                      </button>{" "}
+                      and{" "}
+                      <button 
+                        type="button" 
+                        onClick={() => setPolicyType("privacy")}
+                        className="text-coral-accent font-bold hover:underline"
+                      >
+                        Privacy Policy
+                      </button>.
+                    </label>
+                  </div>
+
+                  <p className="text-[9px] text-sandstone-light leading-relaxed">
+                    <strong>Compliance Notice:</strong> We encrypt and store your name, email, phone (for SMS login), and secure password hash to facilitate custom ordering, cart tracking, and artisan collaboration.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-coral-accent hover:bg-coral-dark text-white font-bold py-3 rounded-xl shadow-md transition-all duration-300 mt-2 flex items-center justify-center gap-2"
+                >
+                  {loading ? "Registering..." : "Create Account"}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* POLICY POP-UP MODAL */}
+      {policyType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-sandstone-light/35 rounded-2xl max-w-xl w-full max-h-[80vh] overflow-y-auto shadow-2xl p-8 relative">
+            <div className="flex justify-between items-center border-b border-sandstone-light/30 pb-4 mb-6">
+              <div className="flex items-center gap-2 text-olive-dark">
+                <Shield className="w-5 h-5 text-olive-dark" />
+                <h3 className="font-archivo text-lg font-black uppercase text-sandstone-dark">
+                  {policyType === "privacy" ? "Privacy Policy" : "Terms & Conditions"}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setPolicyType(null)}
+                className="text-sandstone-light hover:text-sandstone-dark text-lg font-black"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="text-xs text-sandstone-dark leading-relaxed space-y-4 pr-1">
+              {policyType === "privacy" ? (
+                <>
+                  <p className="font-bold text-sm">How we handle and store your user information:</p>
+                  <p>
+                    <strong>1. Information Collection:</strong> We collect your name, email, phone number, and a secure hash of your password when registering. If using Google Sign-In, we collect your verified name and email address from Google.
+                  </p>
+                  <p>
+                    <strong>2. Database Security:</strong> Your password is never stored in plain text. We run it through a secure SHA-256 one-way hashing function before storage, rendering it inaccessible to anyone, including site administrators.
+                  </p>
+                  <p>
+                    <strong>3. Data Usage:</strong> We utilize your contact details exclusively to maintain your active shopping cart, compile your historical orders, coordinate with artisans on product customizations, and authenticate your login sessions.
+                  </p>
+                  <p>
+                    <strong>4. Data Integrity:</strong> We do not sell or lease your personal information to third-party advertisers. All transaction and shipping logs are stored strictly inside a protected database environment.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold text-sm">Terms of Service Acceptance:</p>
+                  <p>
+                    <strong>1. Platform Purpose:</strong> Jharokha connects buyers with Indian craft artisans. We facilitate product customization options (like wood finishes, textile sizes, and metallic engravings) to build a collaborative marketplace.
+                  </p>
+                  <p>
+                    <strong>2. Account Setup:</strong> Users are responsible for maintaining the confidentiality of their credentials and simulated login methods. You agree to provide accurate and active contact coordinates (email/phone).
+                  </p>
+                  <p>
+                    <strong>3. Content Permissions:</strong> All craft illustrations, description text, and customization selectors are the intellectual property of Jharokha and its associated artisans.
+                  </p>
+                  <p>
+                    <strong>4. Compliance and Consent:</strong> By selecting the checkbox, you consent to our automated tracking of your active orders and cookies required for authentication and shopping cart maintenance.
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="mt-8 pt-4 border-t border-sandstone-light/30 flex justify-end">
+              <button
+                onClick={() => setPolicyType(null)}
+                className="bg-olive-dark text-white font-bold px-6 py-2 rounded-xl text-xs hover:bg-olive-light transition-colors"
+              >
+                Close Window
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Footer />
+    </div>
+  );
+}

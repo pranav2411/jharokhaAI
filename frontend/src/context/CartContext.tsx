@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export interface CartItem {
   id: number;
@@ -32,12 +33,13 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const USER_ID = 1; // Default mock user ID
+  const { currentUser } = useAuth();
 
   const fetchCart = async () => {
+    const activeUserId = currentUser ? currentUser.id : 1;
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:8000/api/cart/${USER_ID}`);
+      const res = await fetch(`http://localhost:8000/api/cart/${activeUserId}`);
       if (res.ok) {
         const data = await res.json();
         setCart(data);
@@ -56,7 +58,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     fetchCart();
-  }, []);
+  }, [currentUser]);
+
 
   // Save to local storage for persistence fallbacks
   useEffect(() => {
@@ -68,12 +71,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [cart]);
 
   const addToCart = async (productId: number, qty: number, customizations: Record<string, any>) => {
+    const activeUserId = currentUser ? currentUser.id : 1;
     try {
       const res = await fetch("http://localhost:8000/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: USER_ID,
+          user_id: activeUserId,
           product_id: productId,
           qty,
           selected_customizations: customizations,

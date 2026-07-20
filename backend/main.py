@@ -28,22 +28,129 @@ app.mount("/static", StaticFiles(directory="uploads"), name="static")
 def on_startup():
     init_db()
 
-# --- Users & Auth (Mocked for current user) ---
-@app.get("/api/users/me", response_model=models.User)
-def get_current_user(session: Session = Depends(get_session)):
-    # Default to user ID 1 or create one if none exists (for dev environment)
-    db_user = session.get(models.User, 1)
+# --- Pydantic Request Schemas ---
+from pydantic import BaseModel
+import hashlib
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+class UserRegister(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = None
+    password: str
+    accept_terms: bool
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class PhoneLoginRequest(BaseModel):
+    phone: str
+    code: Optional[str] = None
+
+class GoogleLoginRequest(BaseModel):
+    email: str
+    name: str
+
+class FeaturedProductsRequest(BaseModel):
+    product_ids: List[int]
+
+class CreateAdminRequest(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = None
+    password: str
+
+# --- Users & Auth (Real Authentication & Simulation) ---
+
+@app.post("/api/auth/register", response_model=models.User)
+def register_user(req: UserRegister, session: Session = Depends(get_session)):
+    if not req.accept_terms:
+        raise HTTPException(status_code=400, detail="You must accept the terms and conditions.")
+    
+    # Check if email exists
+    statement = select(models.User).where(models.User.email == req.email.strip().lower())
+    existing_user = session.exec(statement).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="An account with this email already exists.")
+    
+    # Check if the registered email is the primary admin email
+    role = "admin" if req.email.strip().lower() in ["pranavkh2411@gmail.com", "pranavkh2411@gmial.com"] else "customer"
+    
+    db_user = models.User(
+        name=req.name,
+        email=req.email.strip().lower(),
+        phone=req.phone,
+        password_hash=hash_password(req.password),
+        role=role
+    )
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+    return db_user
+
+@app.post("/api/auth/login", response_model=models.User)
+def login_user(req: UserLogin, session: Session = Depends(get_session)):
+    statement = select(models.User).where(models.User.email == req.email.strip().lower())
+    db_user = session.exec(statement).first()
+    if not db_user or db_user.password_hash != hash_password(req.password):
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    return db_user
+
+@app.post("/api/auth/login-phone")
+def login_phone(req: PhoneLoginRequest, session: Session = Depends(get_session)):
+    clean_phone = req.phone.strip()
+    
+    # Find user by phone
+    statement = select(models.User).where(models.User.phone == clean_phone)
+    db_user = session.exec(statement).first()
+    
+    # If code is not provided, we simulate sending the code
+    if not req.code:
+        # Return verification code prompt
+        return {
+            "otp_sent": True,
+            "message": f"Verification code sent to {clean_phone}! (For this demo, please use code 123456)"
+        }
+    
+    # Verify code (for this demo, use 123456)
+    if req.code != "123456":
+        raise HTTPException(status_code=400, detail="Invalid verification code. Please use 123456")
+        
     if not db_user:
+        # Create a new user with this phone number
+        email = f"phone_{clean_phone.replace('+', '')}@jharokha.in"
         db_user = models.User(
-            id=1,
-            name="Aarav Sharma",
-            email="aarav@jharokha.in",
-            role="customer",
-            phone="+919876543210"
+            name=f"User {clean_phone[-4:]}",
+            email=email,
+            phone=clean_phone,
+            role="customer"
         )
         session.add(db_user)
         session.commit()
         session.refresh(db_user)
+        
+    return db_user
+
+@app.post("/api/auth/login-google", response_model=models.User)
+def login_google(req: GoogleLoginRequest, session: Session = Depends(get_session)):
+    clean_email = req.email.strip().lower()
+    statement = select(models.User).where(models.User.email == clean_email)
+    db_user = session.exec(statement).first()
+    
+    if not db_user:
+        role = "admin" if clean_email in ["pranavkh2411@gmail.com", "pranavkh2411@gmial.com"] else "customer"
+        db_user = models.User(
+            name=req.name,
+            email=clean_email,
+            role=role
+        )
+        session.add(db_user)
+        session.commit()
+        session.refresh(db_user)
+        
     return db_user
 
 # Get specific user
@@ -54,14 +161,13 @@ def get_user(user_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-# Create user / Artisan signup
+# Create user / Artisan signup (retained for backward compatibility)
 @app.post("/api/users", response_model=models.User)
 def create_user(user: models.User, session: Session = Depends(get_session)):
-    # Check if email exists
     statement = select(models.User).where(models.User.email == user.email)
     existing_user = session.exec(statement).first()
     if existing_user:
-        return existing_user  # Auto login/reuse for demo
+        return existing_user
     
     session.add(user)
     session.commit()
@@ -170,6 +276,7 @@ def get_products(
             "description": p.description,
             "base_price": p.base_price,
             "is_customizable": p.is_customizable,
+            "is_featured": p.is_featured,
             "stock_qty": p.stock_qty,
             "images": p.images,
             "status": p.status,
@@ -633,4 +740,88 @@ def get_all_orders(session: Session = Depends(get_session)):
             "items": items_hydrated
         })
     return hydrated
+
+# --- Admin User Management & Featured Products Selection ---
+
+@app.get("/api/admin/users")
+def get_all_users(session: Session = Depends(get_session)):
+    return session.exec(select(models.User)).all()
+
+@app.post("/api/admin/create-admin", response_model=models.User)
+def create_admin(req: CreateAdminRequest, session: Session = Depends(get_session)):
+    statement = select(models.User).where(models.User.email == req.email.strip().lower())
+    existing_user = session.exec(statement).first()
+    if existing_user:
+        existing_user.role = "admin"
+        session.add(existing_user)
+        session.commit()
+        session.refresh(existing_user)
+        return existing_user
+        
+    db_user = models.User(
+        name=req.name,
+        email=req.email.strip().lower(),
+        phone=req.phone,
+        password_hash=hash_password(req.password),
+        role="admin"
+    )
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+    return db_user
+
+@app.put("/api/admin/featured-products")
+def set_featured_products(req: FeaturedProductsRequest, session: Session = Depends(get_session)):
+    if len(req.product_ids) != 4:
+        raise HTTPException(status_code=400, detail="Exactly 4 products must be selected.")
+        
+    # Unfeature all products
+    all_products = session.exec(select(models.Product)).all()
+    for prod in all_products:
+        prod.is_featured = (prod.id in req.product_ids)
+        session.add(prod)
+        
+    session.commit()
+    return {"success": True, "message": "Top 4 featured products updated."}
+
+@app.get("/api/products/featured")
+def get_featured_products(session: Session = Depends(get_session)):
+    statement = select(models.Product).where(
+        and_(models.Product.is_featured == True, models.Product.status == "active")
+    )
+    featured = session.exec(statement).all()
+    
+    if len(featured) < 4:
+        statement_other = select(models.Product).where(
+            and_(models.Product.is_featured == False, models.Product.status == "active")
+        ).limit(4 - len(featured))
+        other_active = session.exec(statement_other).all()
+        featured.extend(other_active)
+        
+    featured = featured[:4]
+    
+    results = []
+    for p in featured:
+        artisan = session.get(models.Artisan, p.artisan_id)
+        artisan_user = session.get(models.User, artisan.user_id) if artisan else None
+        category = session.get(models.Category, p.category_id)
+        
+        results.append({
+            "id": p.id,
+            "title": p.title,
+            "description": p.description,
+            "base_price": p.base_price,
+            "is_customizable": p.is_customizable,
+            "is_featured": p.is_featured,
+            "stock_qty": p.stock_qty,
+            "images": p.images,
+            "status": p.status,
+            "artisan_name": artisan_user.name if artisan_user else "Unknown Artisan",
+            "artisan_id": p.artisan_id,
+            "artisan_rating": artisan.rating if artisan else 5.0,
+            "category_name": category.name if category else "General",
+            "category_slug": category.slug if category else "general"
+        })
+        
+    return results
 

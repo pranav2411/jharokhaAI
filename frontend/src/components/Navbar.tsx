@@ -3,11 +3,22 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-import { ShoppingBag, User, Compass, History, Menu, X, Landmark } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { ShoppingBag, User, Compass, History, Menu, X, Landmark, LogOut, Key } from "lucide-react";
 
 export const Navbar: React.FC = () => {
   const { cartCount } = useCart();
+  const { currentUser, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <nav className="sticky top-0 z-40 bg-cream-light/90 backdrop-blur-md border-b border-sandstone-light/20 shadow-sm">
@@ -48,13 +59,15 @@ export const Navbar: React.FC = () => {
               <History className="w-4 h-4 text-sandstone-light" />
               My Orders
             </Link>
-            <Link
-              href="/admin"
-              className="text-foreground hover:text-coral-accent font-medium text-sm transition-colors flex items-center gap-1.5"
-            >
-              <User className="w-4 h-4 text-sandstone-light" />
-              Admin Portal
-            </Link>
+            {currentUser?.role === "admin" && (
+              <Link
+                href="/admin"
+                className="text-coral-accent hover:text-coral-dark font-bold text-sm transition-colors flex items-center gap-1.5 bg-coral-accent/10 px-3 py-1.5 rounded-lg border border-coral-accent/25"
+              >
+                <Key className="w-4 h-4" />
+                Admin Portal
+              </Link>
+            )}
           </div>
 
           {/* Right Action Icons */}
@@ -74,15 +87,34 @@ export const Navbar: React.FC = () => {
             </Link>
 
             {/* Profile Indicator */}
-            <div className="hidden sm:flex items-center space-x-2 border-l border-sandstone-light/30 pl-4">
-              <div className="w-9 h-9 rounded-full bg-olive-dark text-cream-light font-archivo font-bold flex items-center justify-center text-sm border-2 border-sandstone-light/40 shadow-sm">
-                AS
+            {currentUser ? (
+              <div className="hidden sm:flex items-center space-x-3 border-l border-sandstone-light/30 pl-4">
+                <div className="w-9 h-9 rounded-full bg-olive-dark text-cream-light font-archivo font-bold flex items-center justify-center text-sm border-2 border-sandstone-light/40 shadow-sm">
+                  {getInitials(currentUser.name)}
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-semibold text-foreground leading-tight">{currentUser.name}</p>
+                  <p className="text-[10px] text-olive-dark capitalize leading-tight">{currentUser.role} Profile</p>
+                </div>
+                <button
+                  onClick={logout}
+                  title="Logout"
+                  className="p-1.5 rounded-md hover:bg-red-50 text-sandstone-light hover:text-red-500 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
-              <div className="text-left">
-                <p className="text-xs font-semibold text-foreground leading-tight">Aarav S.</p>
-                <p className="text-[10px] text-olive-dark leading-tight">Buyer Profile</p>
+            ) : (
+              <div className="hidden sm:flex items-center border-l border-sandstone-light/30 pl-4">
+                <Link
+                  href="/login"
+                  className="bg-[#43472E] text-white hover:bg-olive-dark font-archivo text-xs uppercase tracking-wider font-bold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  Sign In
+                </Link>
               </div>
-            </div>
+            )}
 
             {/* Mobile Menu Button */}
             <div className="md:hidden flex items-center">
@@ -114,15 +146,43 @@ export const Navbar: React.FC = () => {
           >
             My Orders
           </Link>
-          <Link
-            href="/admin"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-md hover:bg-sandstone-light/10 font-medium text-foreground transition-colors"
-          >
-            Admin Portal
-          </Link>
+          {currentUser?.role === "admin" && (
+            <Link
+              href="/admin"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-md bg-coral-accent/10 font-bold text-coral-accent transition-colors"
+            >
+              Admin Portal
+            </Link>
+          )}
+          {currentUser ? (
+            <div className="pt-2 border-t border-sandstone-light/30 flex items-center justify-between px-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-olive-dark text-cream-light font-bold flex items-center justify-center text-xs">
+                  {getInitials(currentUser.name)}
+                </div>
+                <span className="text-xs font-semibold text-foreground">{currentUser.name}</span>
+              </div>
+              <button
+                onClick={() => { logout(); setMobileMenuOpen(false); }}
+                className="text-xs font-bold text-red-500 flex items-center gap-1"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-center bg-[#43472E] text-white font-archivo text-xs uppercase tracking-wider font-bold py-2 rounded-xl"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       )}
     </nav>
   );
 };
+

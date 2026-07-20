@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { useAuth } from "@/context/AuthContext";
 import { Landmark, Compass, ShoppingBag, History, FileText, CheckCircle2, Package, Sparkles } from "lucide-react";
 import Link from "next/link";
 
@@ -27,51 +28,32 @@ interface Order {
 // Fallback mock orders in case database backend is offline
 const MOCK_ORDERS: Order[] = [
   {
-    id: 1024,
-    total: 2219.0,
-    status: "paid", // Weaving & crafting state
-    shipping_address: "12, Nehru Enclave, Malviya Nagar, New Delhi - 110017",
-    created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+    id: 101,
+    total: 3596.0,
+    status: "delivered",
+    shipping_address: "Aarav Sharma, 102 Heritage Residency, Malviya Nagar, Jaipur, RJ - 302017",
+    created_at: "2026-07-15T12:30:00Z",
     items: [
       {
         id: 1,
-        qty: 1,
+        qty: 2,
+        customizations: {
+          "Lining Fabric & Color": { name: "Indigo Khadi Cotton Lining", price: 120.0, color: "#1A2B4C" },
+          "Handle Style": { name: "Full Grain Leather Wrap Handles", price: 200.0 }
+        },
         price_at_purchase: 899.0,
         product_title: "Handwoven Bamboo Storage Basket",
-        product_image: "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=300&auto=format&fit=crop&q=80",
-        customizations: {
-          "Lining Fabric & Color": { name: "Indigo Khadi Cotton Lining", price: 120.0 },
-          "Handle Style": { name: "Full Grain Leather Wrap Handles", price: 200.0 },
-          "Personalized Bamboo Tag": { value: "AARAV S.", price: 100.0 }
-        }
+        product_image: "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=600&auto=format&fit=crop&q=80"
       },
       {
         id: 2,
         qty: 1,
-        price_at_purchase: 899.0,
-        product_title: "Traditional Terracotta Diya Set (12 pcs)",
-        product_image: "https://images.unsplash.com/photo-1605884766416-d8d4bfd5fdf1?w=300&auto=format&fit=crop&q=80",
-        customizations: {}
-      }
-    ]
-  },
-  {
-    id: 982,
-    total: 1249.0,
-    status: "delivered", // Delivered state
-    shipping_address: "12, Nehru Enclave, Malviya Nagar, New Delhi - 110017",
-    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-    items: [
-      {
-        id: 3,
-        qty: 1,
+        customizations: {
+          "Vase Base Pattern": { name: "Mughal Floral Vine (Classic)", price: 0.0 }
+        },
         price_at_purchase: 1249.0,
         product_title: "Khurja Mughal Cobalt Ceramic Vase",
-        product_image: "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=300&auto=format&fit=crop&q=80",
-        customizations: {
-          "Vase Base Pattern": { name: "Mughal Floral Vine (Classic)", price: 0.0 },
-          "Accent Glaze Color": { name: "Classic Cobalt Blue", price: 0.0 }
-        }
+        product_image: "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80"
       }
     ]
   }
@@ -80,11 +62,13 @@ const MOCK_ORDERS: Order[] = [
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     async function loadOrders() {
+      const activeUserId = currentUser ? currentUser.id : 1;
       try {
-        const res = await fetch("http://localhost:8000/api/orders/user/1");
+        const res = await fetch(`http://localhost:8000/api/orders/user/${activeUserId}`);
         if (res.ok) {
           const data = await res.json();
           // If server is empty, fallback to rich mocks so user has something working
@@ -104,7 +88,7 @@ export default function OrdersPage() {
       }
     }
     loadOrders();
-  }, []);
+  }, [currentUser]);
 
   const calculateCustomizationAddons = (selected: Record<string, any>) => {
     const addons: string[] = [];

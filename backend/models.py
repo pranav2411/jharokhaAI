@@ -6,6 +6,7 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     email: str = Field(unique=True, index=True)
+    password_hash: Optional[str] = Field(default=None)
     role: str = Field(default="customer")  # customer, artisan, admin
     phone: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -45,6 +46,7 @@ class Product(SQLModel, table=True):
     description: str
     base_price: float
     is_customizable: bool = Field(default=False)
+    is_featured: bool = Field(default=False)
     stock_qty: int = Field(default=10)
     images: List[str] = Field(default=[], sa_column=Column(JSON))
     status: str = Field(default="active")  # active, draft, sold_out

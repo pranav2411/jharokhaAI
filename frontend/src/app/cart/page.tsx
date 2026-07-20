@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { ShoppingBag, Trash2, Plus, Minus, Landmark, ShieldCheck, MapPin, X, ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,6 +12,7 @@ import { useRouter } from "next/navigation";
 export default function CartPage() {
   const router = useRouter();
   const { cart, updateQty, removeFromCart, cartTotal, clearCartState } = useCart();
+  const { currentUser } = useAuth();
   
   // Checkout states
   const [shippingAddress, setShippingAddress] = useState("12, Nehru Enclave, Malviya Nagar, New Delhi - 110017");
@@ -33,10 +35,11 @@ export default function CartPage() {
 
   const handleSimulatePayment = async () => {
     setPaymentStatus("paying");
+    const activeUserId = currentUser ? currentUser.id : 1;
     
     // Construct order payload
     const orderPayload = {
-      user_id: 1, // Default user Aarav
+      user_id: activeUserId,
       shipping_address: shippingAddress,
       total: cartTotal
     };

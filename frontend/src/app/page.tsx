@@ -98,11 +98,10 @@ export default function Home() {
   useEffect(() => {
     async function fetchFeatured() {
       try {
-        const res = await fetch("http://localhost:8000/api/products");
+        const res = await fetch("http://localhost:8000/api/products/featured");
         if (res.ok) {
           const data = await res.json();
-          // Filter to first 4 active items
-          setProducts(data.slice(0, 4));
+          setProducts(data);
         } else {
           setProducts(FALLBACK_PRODUCTS);
         }

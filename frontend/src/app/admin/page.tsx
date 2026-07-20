@@ -3,9 +3,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { useAuth } from "@/context/AuthContext";
 import { 
   Plus, Edit2, Trash2, LayoutDashboard, ShoppingCart, MessageSquare, 
-  IndianRupee, Upload, Sparkles, Check, Settings, ShieldAlert, AlertCircle 
+  IndianRupee, Upload, Sparkles, Check, Settings, ShieldAlert, AlertCircle,
+  UserPlus, Shield
 } from "lucide-react";
 import Link from "next/link";
 
@@ -54,13 +56,15 @@ export default function AdminPortal() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Tab control
-  const [activeTab, setActiveTab] = useState<"analytics" | "products" | "orders" | "reviews" | "payments" >("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "products" | "orders" | "reviews" | "payments" | "featured" | "admins">("analytics");
 
   // Data states
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [payments, setPayments] = useState<any>({ total_sales: 0, transactions: [] });
+  const [users, setUsers] = useState<any[]>([]);
+  const [featuredIds, setFeaturedIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form states (Product creation/edit)
@@ -79,6 +83,14 @@ export default function AdminPortal() {
 
   // Feedback states
   const [formFeedback, setFormFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [featuredFeedback, setFeaturedFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [adminFeedback, setAdminFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  // New admin creation states
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminPhone, setAdminPhone] = useState("");
 
   const loadAllAdminData = async () => {
     try {
@@ -89,6 +101,8 @@ export default function AdminPortal() {
       if (prodRes.ok) {
         const prodData = await prodRes.json();
         setProducts(prodData);
+        const initialFeatured = prodData.filter((p: any) => p.is_featured).map((p: any) => p.id);
+        setFeaturedIds(initialFeatured);
       }
       
       // Fetch Orders
@@ -110,6 +124,13 @@ export default function AdminPortal() {
       if (payRes.ok) {
         const payData = await payRes.json();
         setPayments(payData);
+      }
+
+      // Fetch Users
+      const usersRes = await fetch("http://localhost:8000/api/admin/users");
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        setUsers(usersData);
       }
     } catch (err) {
       console.error("Error fetching admin archives from backend:", err);
@@ -317,6 +338,50 @@ export default function AdminPortal() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const { currentUser, loading: authLoading } = useAuth();
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col justify-center items-center bg-cream-light text-foreground">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-olive-dark"></div>
+        <p className="mt-4 text-xs font-archivo uppercase font-bold tracking-widest text-sandstone-light">Loading Admin Session...</p>
+      </div>
+    );
+  }
+
+  if (!currentUser || currentUser.role !== "admin") {
+    return (
+      <div className="min-h-screen flex flex-col bg-cream-light text-foreground">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center py-16 px-4">
+          <div className="max-w-md w-full bg-white border border-sandstone-light/35 rounded-2xl shadow-xl p-8 text-center">
+            <ShieldAlert className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="font-archivo text-2xl font-black uppercase text-sandstone-dark tracking-wide">Access Denied</h2>
+            <p className="text-xs text-sandstone-light mt-2 mb-6 leading-relaxed">
+              This back-office portal is restricted to authorized Jharokha Administrators. 
+              Please sign in with an administrator account to continue.
+            </p>
+            <div className="space-y-3">
+              <Link
+                href="/login"
+                className="block w-full bg-[#43472E] hover:bg-olive-dark text-white font-bold py-3 px-4 rounded-xl text-xs transition-colors shadow-sm text-center font-archivo uppercase tracking-wider"
+              >
+                Go to Login
+              </Link>
+              <Link
+                href="/"
+                className="block w-full bg-cream-light hover:bg-cream-dark text-sandstone-dark font-bold py-3 px-4 rounded-xl text-xs transition-colors border border-sandstone-light/30 text-center font-archivo uppercase tracking-wider"
+              >
+                Return to Homepage
+              </Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-cream-light text-foreground font-sans antialiased">
       
@@ -363,6 +428,8 @@ export default function AdminPortal() {
             { id: "orders", label: "Manage Orders", icon: <ShoppingCart className="w-4 h-4" /> },
             { id: "reviews", label: "Appraisals Moderator", icon: <MessageSquare className="w-4 h-4" /> },
             { id: "payments", label: "Payments Registry", icon: <IndianRupee className="w-4 h-4" /> },
+            { id: "featured", label: "Featured Selection", icon: <Sparkles className="w-4 h-4" /> },
+            { id: "admins", label: "Admin Users", icon: <UserPlus className="w-4 h-4" /> },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -828,6 +895,269 @@ export default function AdminPortal() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: Featured Selection (Homepage Top 4 Products) */}
+          {activeTab === "featured" && (
+            <div className="space-y-6">
+              <div>
+                <span className="text-coral-accent font-archivo text-xs uppercase tracking-widest font-extrabold">Homepage Customization</span>
+                <h2 className="font-archivo text-xl uppercase font-bold text-foreground mt-0.5">Top 4 Featured Products</h2>
+                <div className="w-12 h-0.5 bg-sandstone-light mt-2" />
+              </div>
+
+              <p className="text-xs text-sandstone-light max-w-2xl leading-relaxed">
+                Select exactly **4 active products** to highlight on the main storefront homepage. 
+                Customization and styling will update dynamically once changes are saved.
+              </p>
+
+              {featuredFeedback && (
+                <div className={`p-4 text-xs rounded-xl flex items-center gap-3 border ${
+                  featuredFeedback.type === "success" 
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+                    : "bg-red-50 border-red-200 text-red-700"
+                }`}>
+                  {featuredFeedback.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                  <span>{featuredFeedback.msg}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {products.filter(p => p.status === "active").map((prod) => {
+                  const isChecked = featuredIds.includes(prod.id);
+                  return (
+                    <div 
+                      key={prod.id} 
+                      onClick={() => {
+                        if (isChecked) {
+                          setFeaturedIds(prev => prev.filter(id => id !== prod.id));
+                        } else {
+                          if (featuredIds.length >= 4) {
+                            setFeaturedFeedback({ type: "error", msg: "You can select a maximum of 4 products." });
+                            return;
+                          }
+                          setFeaturedIds(prev => [...prev, prod.id]);
+                        }
+                        setFeaturedFeedback(null);
+                      }}
+                      className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex gap-4 items-center ${
+                        isChecked 
+                          ? "border-coral-accent bg-coral-accent/5 shadow-sm" 
+                          : "border-sandstone-light/20 bg-white hover:border-sandstone-light/40"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}}
+                        className="w-4 h-4 rounded border-sandstone-light/40 text-coral-accent focus:ring-coral-accent pointer-events-none"
+                      />
+                      
+                      {prod.images && prod.images[0] ? (
+                        <img 
+                          src={prod.images[0]} 
+                          alt={prod.title} 
+                          className="w-12 h-12 object-cover rounded-lg border border-sandstone-light/20 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-cream-light border border-sandstone-light/20 flex items-center justify-center text-[10px] text-sandstone-light flex-shrink-0">No Image</div>
+                      )}
+
+                      <div className="text-left">
+                        <h4 className="font-bold text-xs text-foreground line-clamp-1">{prod.title}</h4>
+                        <p className="text-[10px] text-olive-dark mt-0.5">₹{prod.base_price.toLocaleString("en-IN")}</p>
+                        <p className="text-[9px] text-sandstone-light mt-0.5 capitalize">{prod.category_name} • {prod.artisan_name}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pt-4 border-t border-sandstone-light/20 flex justify-between items-center text-xs">
+                <span className="text-sandstone-light font-medium">
+                  Selected: <strong className={featuredIds.length === 4 ? "text-olive-dark" : "text-coral-accent"}>{featuredIds.length} of 4</strong> products
+                </span>
+                <button
+                  onClick={async () => {
+                    if (featuredIds.length !== 4) {
+                      setFeaturedFeedback({ type: "error", msg: "Please select exactly 4 products." });
+                      return;
+                    }
+                    try {
+                      const res = await fetch("http://localhost:8000/api/admin/featured-products", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ product_ids: featuredIds })
+                      });
+                      if (res.ok) {
+                        setFeaturedFeedback({ type: "success", msg: "Homepage featured products updated successfully!" });
+                        await loadAllAdminData();
+                      } else {
+                        const err = await res.json();
+                        setFeaturedFeedback({ type: "error", msg: err.detail || "Failed to update featured products." });
+                      }
+                    } catch (e) {
+                      setFeaturedFeedback({ type: "error", msg: "A network error occurred." });
+                    }
+                  }}
+                  className="bg-coral-accent hover:bg-coral-dark text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-md cursor-pointer"
+                >
+                  Save Selection
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: Admin Users Control (Create / Promote Admin Accounts) */}
+          {activeTab === "admins" && (
+            <div className="space-y-8">
+              <div>
+                <span className="text-coral-accent font-archivo text-xs uppercase tracking-widest font-extrabold">Security & Permissions</span>
+                <h2 className="font-archivo text-xl uppercase font-bold text-foreground mt-0.5">Admin Management</h2>
+                <div className="w-12 h-0.5 bg-sandstone-light mt-2" />
+              </div>
+
+              {/* Form to create/promote admin */}
+              <div className="bg-white border border-sandstone-light/20 rounded-xl p-6 shadow-sm">
+                <h3 className="font-archivo text-xs uppercase tracking-wider font-extrabold text-foreground mb-4">Grant Administrative Privileges</h3>
+                
+                {adminFeedback && (
+                  <div className={`mb-4 p-4 text-xs rounded-xl flex items-center gap-3 border ${
+                    adminFeedback.type === "success" 
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+                      : "bg-red-50 border-red-200 text-red-700"
+                  }`}>
+                    {adminFeedback.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                    <span>{adminFeedback.msg}</span>
+                  </div>
+                )}
+
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setAdminFeedback(null);
+                    try {
+                      const res = await fetch("http://localhost:8000/api/admin/create-admin", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          name: adminName,
+                          email: adminEmail,
+                          password: adminPassword,
+                          phone: adminPhone || null
+                        })
+                      });
+                      if (res.ok) {
+                        setAdminFeedback({ type: "success", msg: "Admin user created / promoted successfully!" });
+                        setAdminName("");
+                        setAdminEmail("");
+                        setAdminPassword("");
+                        setAdminPhone("");
+                        await loadAllAdminData();
+                      } else {
+                        const err = await res.json();
+                        setAdminFeedback({ type: "error", msg: err.detail || "Failed to create admin." });
+                      }
+                    } catch (err) {
+                      setAdminFeedback({ type: "error", msg: "Network error occurred." });
+                    }
+                  }}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                >
+                  <div>
+                    <label className="block text-[9px] uppercase tracking-wider text-sandstone-dark font-bold mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={adminName}
+                      onChange={(e) => setAdminName(e.target.value)}
+                      placeholder="e.g. Rajesh Kumar"
+                      className="w-full bg-cream-light/30 border border-sandstone-light/35 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-coral-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase tracking-wider text-sandstone-dark font-bold mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                      placeholder="e.g. rajesh@jharokha.in"
+                      className="w-full bg-cream-light/30 border border-sandstone-light/35 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-coral-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase tracking-wider text-sandstone-dark font-bold mb-1">Temporary Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-cream-light/30 border border-sandstone-light/35 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-coral-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase tracking-wider text-sandstone-dark font-bold mb-1">Phone Number (Optional)</label>
+                    <input
+                      type="tel"
+                      value={adminPhone}
+                      onChange={(e) => setAdminPhone(e.target.value)}
+                      placeholder="e.g. +919999988888"
+                      className="w-full bg-cream-light/30 border border-sandstone-light/35 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-coral-accent"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      className="bg-[#43472E] hover:bg-olive-dark text-white font-bold py-2.5 px-6 rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+                    >
+                      Promote / Create Admin
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* List of current users */}
+              <div className="bg-white border border-sandstone-light/20 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-6 py-4 bg-cream-light/35 border-b border-sandstone-light/20 flex justify-between items-center">
+                  <h3 className="font-archivo text-xs uppercase tracking-wider font-extrabold text-foreground">Registered Users Directory</h3>
+                  <span className="text-[10px] text-olive-dark font-bold">{users.length} accounts</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-foreground/80 border-collapse">
+                    <thead className="bg-cream-light/20 text-[10px] uppercase font-bold text-sandstone-light tracking-wider border-b border-sandstone-light/20">
+                      <tr>
+                        <th className="px-6 py-3">Name</th>
+                        <th className="px-6 py-3">Email</th>
+                        <th className="px-6 py-3">Phone</th>
+                        <th className="px-6 py-3">Role Privilege</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-sandstone-light/10">
+                      {users.map((u) => (
+                        <tr key={u.id} className="hover:bg-cream-light/10">
+                          <td className="px-6 py-3.5 font-semibold text-foreground">{u.name}</td>
+                          <td className="px-6 py-3.5 text-sandstone-dark">{u.email}</td>
+                          <td className="px-6 py-3.5 text-sandstone-dark">{u.phone || "—"}</td>
+                          <td className="px-6 py-3.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                              u.role === "admin" 
+                                ? "bg-red-50 border border-red-200 text-red-600" 
+                                : u.role === "artisan"
+                                ? "bg-olive-light/20 border border-olive-light/30 text-olive-dark"
+                                : "bg-blue-50 border border-blue-100 text-blue-600"
+                            }`}>
+                              {u.role}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
