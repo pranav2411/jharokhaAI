@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FAF6F0; /* Cream Light */
+  --foreground: #2C2017; /* Dark Sandstone Wood */
+  
+  --color-sandstone-light: #C99A5B;
+  --color-sandstone-dark: #8B5E34;
+  --color-olive-dark: #5A5F3D;
+  --color-olive-light: #737851;
+  --color-cream-light: #FAF6F0;
+  --color-cream-dark: #F3E9DA;
+  --color-coral-accent: #D98354;
+  --color-rust: #B85A38;
+}
+
+@theme {
+  --color-sandstone-light: #C99A5B;
+  --color-sandstone-dark: #8B5E34;
+  --color-olive-dark: #5A5F3D;
+  --color-olive-light: #737851;
+  --color-cream-light: #FAF6F0;
+  --color-cream-dark: #F3E9DA;
+  --color-coral-accent: #D98354;
+  --color-rust: #B85A38;
+  
+  --font-archivo: var(--font-archivo);
+  --font-poppins: var(--font-poppins);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-archivo), Impact, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Custom Lattice / Jaali Background */
+.bg-jaali {
+  background-color: var(--color-cream-light);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M16 0 L32 16 L16 32 L0 16 Z M16 4 L28 16 L16 28 L4 16 Z' fill='%238B5E34' fill-opacity='0.03'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%238B5E34' fill-opacity='0.06'/%3E%3Ccircle cx='0' cy='0' r='1.5' fill='%238B5E34' fill-opacity='0.06'/%3E%3Ccircle cx='32' cy='0' r='1.5' fill='%238B5E34' fill-opacity='0.06'/%3E%3Ccircle cx='0' cy='32' r='1.5' fill='%238B5E34' fill-opacity='0.06'/%3E%3Ccircle cx='32' cy='32' r='1.5' fill='%238B5E34' fill-opacity='0.06'/%3E%3C/svg%3E");
+}
+
+.bg-jaali-dark {
+  background-color: #4C5033; /* Darker olive/sandstone mix */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M16 0 L32 16 L16 32 L0 16 Z M16 4 L28 16 L16 28 L4 16 Z' fill='%23FAF6F0' fill-opacity='0.03'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23FAF6F0' fill-opacity='0.06'/%3E%3C/svg%3E");
+}
+
+/* Jharokha Photo Mask Shapes */
+/* Arched Jharokha Clip Path */
+.jharokha-clip-arch {
+  clip-path: path('M 15 380 L 15 110 C 15 50, 70 15, 150 15 C 230 15, 285 50, 285 110 L 285 380 Z');
+}
+
+/* Round/Ochre Jharokha Clip Path */
+.jharokha-clip-round {
+  clip-path: path('M 15 380 L 15 190 C 15 100, 75 25, 150 25 C 225 25, 285 100, 285 190 L 285 380 Z');
+}
+
+/* Standard default Jharokha Clip Path */
+.jharokha-clip-default {
+  clip-path: path('M 15 380 L 15 120 L 70 65 L 150 15 L 230 65 L 285 120 L 285 380 Z');
+}
+
+/* Standardizing the Jharokha Card Dimensions */
+.jharokha-card-container {
+  position: relative;
+  width: 300px;
+  height: 380px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.jharokha-card-container:hover {
+  transform: translateY(-8px);
+}
+
+/* Smooth custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-cream-light);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-sandstone-light);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-sandstone-dark);
+}
