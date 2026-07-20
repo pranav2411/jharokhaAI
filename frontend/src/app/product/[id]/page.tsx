@@ -234,15 +234,15 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
   const { currentUser } = useAuth();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Gallery
   const [selectedImage, setSelectedImage] = useState<string>("");
-  
+
   // Customization selection state
   const [selections, setSelections] = useState<Record<string, any>>({});
   const [textInputs, setTextInputs] = useState<Record<string, string>>({});
   const [studioActive, setStudioActive] = useState(false);
-  
+
   // Review writing state
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -264,7 +264,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
           setProduct(data);
           setReviewsList(data.reviews || []);
           setSelectedImage(data.images[0]);
-          
+
           // Seed default selections
           const defaults: Record<string, any> = {};
           data.customization_options.forEach((opt: any) => {
@@ -289,7 +289,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
       setProduct(fb);
       setReviewsList(fb.reviews || []);
       setSelectedImage(fb.images[0]);
-      
+
       const defaults: Record<string, any> = {};
       fb.customization_options.forEach((opt: any) => {
         if (opt.option_type === "select" || opt.option_type === "color_swatch") {
@@ -331,7 +331,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
 
   // Calculate live total price
   let totalPrice = product.base_price;
-  
+
   // Customization selection upcharges
   Object.values(selections).forEach((sel) => {
     if (sel && typeof sel === "object" && "price" in sel) {
@@ -369,7 +369,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
 
   const handleAddToCart = async () => {
     setIsAdding(true);
-    
+
     // Construct final customizations object for cart storage
     const finalCustomizations: Record<string, any> = {};
     Object.entries(selections).forEach(([key, val]) => {
@@ -379,7 +379,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
     });
 
     await addToCart(product.id, 1, finalCustomizations);
-    
+
     setIsAdding(false);
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 2500);
@@ -472,7 +472,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-grow">
-        
+
         {/* Breadcrumbs */}
         <div className="mb-6 flex justify-between items-center text-xs">
           <Link
@@ -488,34 +488,32 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
 
         {/* Core Product Info */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          
+
           {/* Left Side: Images or Customizer Studio */}
           <div className="lg:col-span-6 space-y-4">
-            
+
             {/* Customizer Studio Mode Selector */}
             {product.is_customizable && (
               <div className="flex bg-cream-dark/50 border border-sandstone-light/15 rounded-2xl p-1 max-w-xs mx-auto mb-2 text-xs">
                 <button
                   type="button"
                   onClick={() => setStudioActive(false)}
-                  className={`flex-grow py-2 px-4 rounded-xl font-bold transition-all uppercase font-archivo text-[10px] tracking-wider cursor-pointer ${
-                    !studioActive
-                      ? "bg-white text-foreground shadow-sm"
-                      : "text-foreground/60 hover:text-foreground"
-                  }`}
+                  className={`flex-grow py-2 px-4 rounded-xl font-bold transition-all uppercase font-archivo text-[10px] tracking-wider cursor-pointer ${!studioActive
+                    ? "bg-white text-foreground shadow-sm"
+                    : "text-foreground/60 hover:text-foreground"
+                    }`}
                 >
-                  📸 Photos
+                  Photos
                 </button>
                 <button
                   type="button"
                   onClick={() => setStudioActive(true)}
-                  className={`flex-grow py-2 px-4 rounded-xl font-bold transition-all uppercase font-archivo text-[10px] tracking-wider cursor-pointer ${
-                    studioActive
-                      ? "bg-white text-foreground shadow-sm"
-                      : "text-foreground/60 hover:text-foreground"
-                  }`}
+                  className={`flex-grow py-2 px-4 rounded-xl font-bold transition-all uppercase font-archivo text-[10px] tracking-wider cursor-pointer ${studioActive
+                    ? "bg-white text-foreground shadow-sm"
+                    : "text-foreground/60 hover:text-foreground"
+                    }`}
                 >
-                  🎨 Studio Live
+                  Studio Live
                 </button>
               </div>
             )}
@@ -535,7 +533,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                     alt={product.title}
                     className="w-full h-full object-cover"
                   />
-                  
+
                   {product.is_customizable && (
                     <div className="absolute top-4 left-4 bg-coral-accent text-white py-1 px-2.5 rounded-full text-[9px] font-archivo font-bold uppercase tracking-widest flex items-center gap-1 shadow-md">
                       <Settings className="w-3 h-3 animate-spin-slow" />
@@ -543,7 +541,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                     </div>
                   )}
                 </div>
-                
+
                 {/* Gallery Thumbnails */}
                 {product.images && product.images.length > 1 && (
                   <div className="flex gap-3">
@@ -551,11 +549,10 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                       <button
                         key={idx}
                         onClick={() => setSelectedImage(img)}
-                        className={`w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
-                          selectedImage === img
-                            ? "border-sandstone-dark scale-105 shadow-sm"
-                            : "border-transparent opacity-70 hover:opacity-100"
-                        }`}
+                        className={`w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === img
+                          ? "border-sandstone-dark scale-105 shadow-sm"
+                          : "border-transparent opacity-70 hover:opacity-100"
+                          }`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={img} alt="" className="w-full h-full object-cover" />
@@ -581,7 +578,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               <h1 className="font-archivo text-2xl sm:text-3xl font-black uppercase tracking-tight text-foreground leading-tight">
                 {product.title}
               </h1>
-              
+
               <div className="flex items-center space-x-3 text-sm">
                 <div className="flex items-center text-amber-500">
                   <Star className="w-4 h-4 fill-current" />
@@ -613,7 +610,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
 
             {!product.is_customizable && (
               <div className="bg-sandstone-light/10 border border-sandstone-light/20 rounded-xl p-3.5 text-xs text-foreground/50 font-semibold italic text-left">
-                ⚠️ Customization is not available for this unique item.
+                Customization is not available for this unique item.
               </div>
             )}
 
@@ -653,12 +650,12 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                 </h3>
 
                 {product.customization_options.map((opt: any) => {
-                  
+
                   // Text Monogram Input Type
                   if (opt.option_type === "text") {
                     const textConfig = opt.choices; // placeholder, max_len, price
                     const enteredText = textInputs[opt.option_name] || "";
-                    
+
                     return (
                       <div key={opt.id} className="space-y-2">
                         <div className="flex justify-between items-center text-xs">
@@ -689,7 +686,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                             {opt.option_name}
                           </label>
                           <span className="text-[10px] font-bold text-sandstone-dark">
-                            {selections[opt.option_name]?.name || "Select options"} 
+                            {selections[opt.option_name]?.name || "Select options"}
                             {selections[opt.option_name]?.price > 0 && ` (+₹${selections[opt.option_name].price})`}
                           </span>
                         </div>
@@ -753,11 +750,10 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               <button
                 onClick={handleAddToCart}
                 disabled={isAdding}
-                className={`flex-grow h-14 rounded-2xl font-archivo font-extrabold uppercase text-xs tracking-wider transition-all duration-300 flex items-center justify-center gap-2 shadow-md ${
-                  isAdded
-                    ? "bg-green-600 text-white"
-                    : "bg-coral-accent hover:bg-rust text-white hover:shadow-lg"
-                }`}
+                className={`flex-grow h-14 rounded-2xl font-archivo font-extrabold uppercase text-xs tracking-wider transition-all duration-300 flex items-center justify-center gap-2 shadow-md ${isAdded
+                  ? "bg-green-600 text-white"
+                  : "bg-coral-accent hover:bg-rust text-white hover:shadow-lg"
+                  }`}
               >
                 {isAdded ? (
                   <>
@@ -769,7 +765,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                   </>
                 )}
               </button>
-              
+
               <button
                 className="w-14 h-14 border border-sandstone-light/40 rounded-2xl hover:bg-red-50 hover:border-red-200 text-foreground/45 hover:text-red-500 transition-colors flex items-center justify-center"
                 title="Wishlist"
@@ -792,13 +788,13 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
         {/* Reviews & Community Section */}
         <section className="mt-20 border-t border-sandstone-light/20 pt-12 text-left">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-            
+
             {/* Reviews list */}
             <div className="lg:col-span-7 space-y-6">
               <h3 className="font-archivo text-lg uppercase font-bold tracking-wider text-foreground">
                 Artisan Work Appraisals ({reviewsList.length})
               </h3>
-              
+
               {reviewsList.length === 0 ? (
                 <p className="text-xs text-foreground/50">No evaluations written yet. Be the first to share your purchase co-creation review!</p>
               ) : (
@@ -811,9 +807,8 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`w-3.5 h-3.5 ${
-                                i < rev.rating ? "fill-current" : "text-gray-300"
-                              }`}
+                              className={`w-3.5 h-3.5 ${i < rev.rating ? "fill-current" : "text-gray-300"
+                                }`}
                             />
                           ))}
                         </div>
@@ -844,7 +839,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               <h4 className="font-archivo text-sm uppercase font-bold tracking-wider text-foreground">
                 Write an Appraisal
               </h4>
-              
+
               <form onSubmit={handleReviewSubmit} className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark">Rating</label>
