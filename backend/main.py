@@ -31,9 +31,24 @@ def on_startup():
 # --- Pydantic Request Schemas ---
 from pydantic import BaseModel
 import hashlib
+import json
+import urllib.request
+import urllib.error
 
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_google_token(token: str) -> dict:
+    url = f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+            return data
+    except urllib.error.HTTPError as e:
+        raise ValueError("Invalid Google credentials/token.") from e
+    except Exception as e:
+        raise ValueError(f"Failed to verify Google token: {str(e)}") from e
 
 class UserRegister(BaseModel):
     name: str
@@ -53,6 +68,7 @@ class PhoneLoginRequest(BaseModel):
 class GoogleLoginRequest(BaseModel):
     email: str
     name: str
+    credential: Optional[str] = None
 
 class FeaturedProductsRequest(BaseModel):
     product_ids: List[int]
@@ -149,15 +165,27 @@ def login_phone(req: PhoneLoginRequest, session: Session = Depends(get_session))
 
 @app.post("/api/auth/login-google", response_model=models.User)
 def login_google(req: GoogleLoginRequest, session: Session = Depends(get_session)):
-    clean_email = req.email.strip().lower()
-    statement = select(models.User).where(models.User.email == clean_email)
+    email_to_use = req.email.strip().lower()
+    name_to_use = req.name
+    
+    if req.credential:
+        try:
+            payload = verify_google_token(req.credential)
+            email_to_use = payload.get("email", "").strip().lower()
+            name_to_use = payload.get("name", name_to_use)
+            if not email_to_use:
+                raise HTTPException(status_code=400, detail="Google token does not contain a valid email.")
+        except ValueError as e:
+            raise HTTPException(status_code=401, detail=str(e))
+
+    statement = select(models.User).where(models.User.email == email_to_use)
     db_user = session.exec(statement).first()
     
     if not db_user:
-        role = "admin" if clean_email in ["pranavkh2411@gmail.com", "pranavkh2411@gmial.com"] else "customer"
+        role = "admin" if email_to_use in ["pranavkh2411@gmail.com", "pranavkh2411@gmial.com"] else "customer"
         db_user = models.User(
-            name=req.name,
-            email=clean_email,
+            name=name_to_use,
+            email=email_to_use,
             role=role
         )
         session.add(db_user)
