@@ -57,6 +57,7 @@ class UserRegister(BaseModel):
     email: str
     phone: Optional[str] = None
     password: str
+    role: Optional[str] = "customer"
     accept_terms: bool
 
 class UserLogin(BaseModel):
@@ -108,7 +109,8 @@ def register_user(req: UserRegister, session: Session = Depends(get_session)):
         raise HTTPException(status_code=400, detail="An account with this email already exists.")
     
     # Check if the registered email is the primary admin email
-    role = "admin" if req.email.strip().lower() in ["pranavkh2411@gmail.com", "pranavkh2411@gmial.com"] else "customer"
+    requested_role = req.role if req.role in ["customer", "artisan"] else "customer"
+    role = "admin" if req.email.strip().lower() in ["pranavkh2411@gmail.com", "pranavkh2411@gmial.com"] else requested_role
     
     db_user = models.User(
         name=req.name,
@@ -120,6 +122,21 @@ def register_user(req: UserRegister, session: Session = Depends(get_session)):
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
+
+    if role == "artisan":
+        db_artisan = models.Artisan(
+            user_id=db_user.id,
+            bio="Traditional artisan preserving handcrafted heritages.",
+            craft_type="Handicrafts",
+            city="Jaipur",
+            rating=5.0,
+            photo_url="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80",
+            is_verified=False
+        )
+        session.add(db_artisan)
+        session.commit()
+        session.refresh(db_user)
+
     return db_user
 
 @app.post("/api/auth/login", response_model=models.User)

@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phoneVal, setPhoneVal] = useState("");
+  const [role, setRole] = useState("customer"); // "customer" | "artisan"
   const [acceptTerms, setAcceptTerms] = useState(false);
   
   // Phone OTP States
@@ -164,10 +165,16 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const user = await register(name, email, password, phoneVal, acceptTerms);
+      const user = await register(name, email, password, phoneVal, role, acceptTerms);
       setSuccessMsg(`Account created successfully! Welcome, ${user.name}.`);
       setTimeout(() => {
-        router.push(user.role === "admin" ? "/admin" : "/");
+        if (user.role === "admin") {
+          router.push("/admin");
+        } else if (user.role === "artisan") {
+          router.push("/dashboard");
+        } else {
+          router.push("/");
+        }
       }, 1500);
     } catch (err: any) {
       setErrorMsg(err.message || "Registration failed. Try a different email.");
@@ -531,6 +538,36 @@ export default function LoginPage() {
                       placeholder="e.g. +919876543210"
                       className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors"
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">I want to register as</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setRole("customer")}
+                      className={`py-3 px-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-300 text-sm cursor-pointer ${
+                        role === "customer"
+                          ? "bg-coral-accent/10 border-coral-accent text-coral-accent font-bold shadow-sm"
+                          : "bg-cream-light/20 border-sandstone-light/40 text-sandstone-dark hover:border-sandstone-light"
+                      }`}
+                    >
+                      <span className="text-lg">🛒</span>
+                      <span>Buyer / Customer</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRole("artisan")}
+                      className={`py-3 px-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-300 text-sm cursor-pointer ${
+                        role === "artisan"
+                          ? "bg-coral-accent/10 border-coral-accent text-coral-accent font-bold shadow-sm"
+                          : "bg-cream-light/20 border-sandstone-light/40 text-sandstone-dark hover:border-sandstone-light"
+                      }`}
+                    >
+                      <span className="text-lg">🏺</span>
+                      <span>Seller / Artisan</span>
+                    </button>
                   </div>
                 </div>
 

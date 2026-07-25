@@ -18,7 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<User>;
   loginPhone: (phone: string, code?: string) => Promise<{ otpSent: boolean; user?: User; message?: string }>;
   loginGoogle: (email: string, name: string, credential?: string) => Promise<User>;
-  register: (name: string, email: string, password: string, phone: string, acceptTerms: boolean) => Promise<User>;
+  register: (name: string, email: string, password: string, phone: string, role: string, acceptTerms: boolean) => Promise<User>;
   logout: () => void;
   updateCurrentUser: (user: User) => void;
 }
@@ -106,12 +106,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: string,
     password: string,
     phone: string,
+    role: string,
     acceptTerms: boolean
   ): Promise<User> => {
     const res = await fetch(`${API_URL}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, phone, accept_terms: acceptTerms }),
+      body: JSON.stringify({ name, email, password, phone, role, accept_terms: acceptTerms }),
     });
 
     if (!res.ok) {
