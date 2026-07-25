@@ -218,7 +218,7 @@ export default function ArtisanDashboard() {
 
   // Trigger self-healing sandbox test of custom pricing formula
   const handleSandboxCompile = async () => {
-    if (!formulaInstructions.strip && formulaInstructions.length === 0) {
+    if (!formulaInstructions.trim()) {
       alert("Please enter some pricing rules for the AI Sandbox compiler.");
       return;
     }
