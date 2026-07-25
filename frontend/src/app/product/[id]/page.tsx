@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { Star, Settings, ShoppingBag, ArrowLeft, Heart, Check, MapPin, Sparkles } from "lucide-react";
+import { Star, Settings, ShoppingBag, ArrowLeft, Heart, Check, MapPin, Sparkles, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProductStudio from "@/components/ProductStudio";
@@ -236,6 +236,11 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Special Custom Requirements & Feasibility check
+  const [customRequirements, setCustomRequirements] = useState("");
+  const [checkingFeasibility, setCheckingFeasibility] = useState(false);
+  const [feasibilityReport, setFeasibilityReport] = useState<any>(null);
+
   // Gallery
   const [selectedImage, setSelectedImage] = useState<string>("");
 
@@ -444,6 +449,37 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
     }
   };
 
+  const handleCheckFeasibility = async () => {
+    if (!customRequirements.trim()) {
+      alert("Please enter some custom design requirements first.");
+      return;
+    }
+    setCheckingFeasibility(true);
+    setFeasibilityReport(null);
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai/check-feasibility`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_title: product.title,
+          product_desc: product.description,
+          custom_request: customRequirements
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFeasibilityReport(data);
+      } else {
+        alert("Failed to analyze feasibility. Please verify backend connection.");
+      }
+    } catch (err) {
+      console.error("Error checking feasibility:", err);
+    } finally {
+      setCheckingFeasibility(false);
+    }
+  };
+
   const handleAddToCart = async () => {
     setIsAdding(true);
 
@@ -454,6 +490,10 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
         finalCustomizations[key] = val;
       }
     });
+
+    if (customRequirements.trim()) {
+      finalCustomizations["Special Requirements"] = { value: customRequirements, price: 0.0 };
+    }
 
     await addToCart(product.id, 1, finalCustomizations);
 
@@ -893,8 +933,59 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                     {chatSending ? "..." : "Send"}
                   </button>
                 </div>
+
+                {/* Special Custom Design Requirements & Feasibility check */}
+                <div className="border-t border-sandstone-light/10 pt-4 space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <label className="font-bold uppercase tracking-wider text-olive-dark">
+                      Special Custom Requirements (Optional)
+                    </label>
+                  </div>
+                  <textarea
+                    rows={3}
+                    placeholder="Describe custom clay colors, size limits, or special engraving ideas..."
+                    value={customRequirements}
+                    onChange={(e) => setCustomRequirements(e.target.value)}
+                    className="w-full bg-cream-light border border-sandstone-light/40 focus:border-sandstone-dark rounded-xl p-3.5 text-xs focus:outline-none text-foreground font-medium"
+                  />
+                  
+                  <button
+                    type="button"
+                    onClick={handleCheckFeasibility}
+                    disabled={checkingFeasibility || !customRequirements.trim()}
+                    className="w-full bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-[10px] font-archivo font-extrabold uppercase py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {checkingFeasibility ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Checking Feasibility...
+                      </>
+                    ) : (
+                      "Check Feasibility with AI"
+                    )}
+                  </button>
+
+                  {feasibilityReport && (
+                    <div className={`p-4 rounded-2xl border text-xs space-y-1.5 text-left ${
+                      feasibilityReport.is_feasible 
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                        : "bg-rose-50 border-rose-200 text-rose-800"
+                    }`}>
+                      <div className="flex items-center gap-1.5 font-bold uppercase text-[9px] tracking-wider">
+                        {feasibilityReport.is_feasible ? (
+                          <span className="text-emerald-600">✓ Feasible Structure</span>
+                        ) : (
+                          <span className="text-rose-600">✗ Structural Risk Detected</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-medium leading-relaxed">
+                        {feasibilityReport.reason}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
+
 
             {/* Cart Button and Call To Actions */}
             <div className="flex gap-4 pt-4 border-t border-sandstone-light/10">

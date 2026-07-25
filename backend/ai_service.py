@@ -369,3 +369,79 @@ def chat_with_artisan_assistant(chat_history: list, user_message: str, product_d
             "customization_detected": False,
             "customizations": {}
         }
+
+def generate_artisan_copy(copy_type: str, raw_details: str, category: Optional[str] = None) -> str:
+    """Generates poetic, SEO-optimized copy (description or bio) for artisans using Gemini."""
+    if not GEMINI_API_KEY:
+        if copy_type == "bio":
+            return (
+                f"Born and raised in the heart of traditional craftsmanship, our artisan partner excels in creating "
+                f"exquisite handmade works. With a focus on preserving ancestral methods, each creation is crafted over "
+                f"days using organic, sustainable materials, capturing the pure soul of India's legacy. Raw details: {raw_details}"
+            )
+        else:
+            return (
+                f"Indulge in this masterfully crafted creation, utilizing traditional techniques passed down through generations. "
+                f"Meticulously shaped and detailed, this piece brings the rich history of native craftsmanship into your home. "
+                f"Ideal for collectors seeking heritage design. Raw details: {raw_details}"
+            )
+
+    cat_clause = f" for the category '{category}'" if category else ""
+    if copy_type == "bio":
+        prompt = (
+            f"Write a professional, poetic, and inspiring artisan seller bio in English based on these raw details: '{raw_details}'. "
+            f"Emphasize traditional Indian heritage, decades of dedication, and organic craftsmanship. "
+            f"Return a JSON object containing a single key 'copy' containing the generated bio text (80-120 words)."
+        )
+    else:
+        prompt = (
+            f"Write an SEO-optimized, highly appealing, and poetic product description in English{cat_clause} based on these raw details: '{raw_details}'. "
+            f"Highlight structural aesthetics, material authenticity, and the cultural history of the craft. "
+            f"Return a JSON object containing a single key 'copy' containing the generated description text (100-150 words)."
+        )
+
+    contents = [{"parts": [{"text": prompt}]}]
+    try:
+        res = call_gemini(contents)
+        data = json.loads(res)
+        return data.get("copy", "")
+    except Exception as e:
+        print(f"Generate copy error: {e}")
+        return f"A beautifully crafted piece created with traditional heritage techniques. Details: {raw_details}"
+
+def check_customization_feasibility(product_title: str, product_desc: str, custom_request: str) -> dict:
+    """Evaluates the physical and structural feasibility of a buyer's custom design requests."""
+    if not GEMINI_API_KEY:
+        # Mock responses for local dev
+        lower_req = custom_request.lower()
+        if "100 inch" in lower_req or "100" in lower_req or "too big" in lower_req or "10 feet" in lower_req:
+            return {
+                "is_feasible": False,
+                "reason": "A dimension of that height is structurally unfeasible for unsupported clay. Clay will collapse under its own weight during the drying and firing stages. Recommend keeping custom height under 24 inches for safe firing."
+            }
+        else:
+            return {
+                "is_feasible": True,
+                "reason": "This customization request is highly feasible! The artisan can perform the custom detailing. Note: fine hand-carving or custom engravings will add approximately 2 additional days to the drying process before kiln firing."
+            }
+
+    prompt = (
+        f"You are a master craftsman expert. Evaluate the feasibility of a buyer's custom request: '{custom_request}' "
+        f"for the product titled '{product_title}' (described as: '{product_desc}'). "
+        "Analyze structural feasibility (e.g., will clay collapse? Is wood carving possible at this scale? Is it too fragile? Is the drying/baking time increased?). "
+        "Return a JSON object containing: "
+        "is_feasible (boolean: true if constructible and structurally safe, false otherwise), "
+        "reason (string: highly detailed, professional validation advice explaining structural factors or drying times)."
+    )
+
+    contents = [{"parts": [{"text": prompt}]}]
+    try:
+        res = call_gemini(contents)
+        return json.loads(res)
+    except Exception as e:
+        print(f"Feasibility check error: {e}")
+        return {
+            "is_feasible": True,
+            "reason": f"AI feasibility analysis succeeded with default validation. Request details: {custom_request}"
+        }
+

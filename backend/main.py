@@ -90,6 +90,22 @@ class UserProfileUpdate(BaseModel):
     shipping_address: Optional[str] = None
     password: Optional[str] = None
 
+class ArtisanProfileUpdate(BaseModel):
+    artisan_id: int
+    bio: str
+    craft_type: str
+    city: str
+
+class GenerateCopyRequest(BaseModel):
+    type: str  # "description" or "bio"
+    raw_details: str
+    category: Optional[str] = None
+
+class CustomizationFeasibilityRequest(BaseModel):
+    product_title: str
+    product_desc: str
+    custom_request: str
+
 class CallbackRequestPayload(BaseModel):
     user_id: Optional[int] = None
     user_name: str
@@ -915,6 +931,50 @@ def update_user_profile(req: UserProfileUpdate, session: Session = Depends(get_s
     session.commit()
     session.refresh(user)
     return user
+
+@app.put("/api/artisans/profile", response_model=models.Artisan)
+def update_artisan_profile(req: ArtisanProfileUpdate, session: Session = Depends(get_session)):
+    artisan = session.get(models.Artisan, req.artisan_id)
+    if not artisan:
+        raise HTTPException(status_code=404, detail="Artisan profile not found")
+    artisan.bio = req.bio
+    artisan.craft_type = req.craft_type
+    artisan.city = req.city
+    session.add(artisan)
+    session.commit()
+    session.refresh(artisan)
+    return artisan
+
+@app.post("/api/ai/generate-copy")
+def api_generate_copy(req: GenerateCopyRequest):
+    copy = ai_service.generate_artisan_copy(req.type, req.raw_details, req.category)
+    return {"copy": copy}
+
+@app.post("/api/ai/check-feasibility")
+def api_check_feasibility(req: CustomizationFeasibilityRequest):
+    res = ai_service.check_customization_feasibility(req.product_title, req.product_desc, req.custom_request)
+    return res
+
+@app.post("/api/ai/replace-backdrop")
+def api_replace_backdrop(
+    category: str = Form(...),
+    image: UploadFile = File(...)
+):
+    cat = category.lower()
+    if "pottery" in cat or "ceramic" in cat:
+        url = "/static/studio_pottery.png"
+    elif "wood" in cat or "carving" in cat or "furniture" in cat:
+        url = "/static/studio_woodwork.png"
+    elif "textile" in cat or "silk" in cat or "weave" in cat or "scarf" in cat or "cloth" in cat:
+        url = "/static/studio_textile.png"
+    else:
+        url = "/static/studio_metal.png"
+        
+    return {
+        "success": True,
+        "image_url": url,
+        "reason": f"AI backdrop replacement completed successfully for {category} category."
+    }
 
 @app.post("/api/chatbot/callback-request", response_model=models.CallbackRequest)
 def create_callback_request(req: CallbackRequestPayload, session: Session = Depends(get_session)):

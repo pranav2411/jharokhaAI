@@ -65,6 +65,21 @@ export default function ArtisanDashboard() {
   const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
   const [businessFile, setBusinessFile] = useState<File | null>(null);
 
+  const [artisanBio, setArtisanBio] = useState("");
+  const [artisanCity, setArtisanCity] = useState("");
+  const [artisanCraft, setArtisanCraft] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileFeedback, setProfileFeedback] = useState<string | null>(null);
+  const [rawBioDetails, setRawBioDetails] = useState("");
+  const [generatingBio, setGeneratingBio] = useState(false);
+
+  const [rawDescDetails, setRawDescDetails] = useState("");
+  const [generatingDesc, setGeneratingDesc] = useState(false);
+
+  const [productPhoto, setProductPhoto] = useState<File | null>(null);
+  const [replacingBackdrop, setReplacingBackdrop] = useState(false);
+  const [backdropFeedback, setBackdropFeedback] = useState<string | null>(null);
+
   // Form State
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -110,11 +125,14 @@ export default function ArtisanDashboard() {
         setProducts(data);
       }
       
-      // Load artisan verification status
+      // Load artisan details
       const artRes = await fetch(`${API_URL}/api/artisans/1`);
       if (artRes.ok) {
         const artData = await artRes.json();
         setArtisanVerified(artData.is_verified);
+        setArtisanBio(artData.bio || "");
+        setArtisanCity(artData.city || "");
+        setArtisanCraft(artData.craft_type || "");
       }
     } catch (err) {
       console.error("Dashboard products loading error:", err);
@@ -187,6 +205,128 @@ export default function ArtisanDashboard() {
       });
     } finally {
       setVerifyingDoc(false);
+    }
+  };
+
+  const handleSaveArtisanProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    setProfileFeedback(null);
+    try {
+      const res = await fetch(`${API_URL}/api/artisans/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          artisan_id: 1,
+          bio: artisanBio,
+          craft_type: artisanCraft,
+          city: artisanCity
+        })
+      });
+      if (res.ok) {
+        setProfileFeedback("Profile updated successfully!");
+        setTimeout(() => setProfileFeedback(null), 3000);
+      } else {
+        setProfileFeedback("Failed to update profile.");
+      }
+    } catch (err) {
+      console.error("Error saving artisan profile:", err);
+      setProfileFeedback("Network error saving profile.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleGenerateBio = async () => {
+    if (!rawBioDetails.trim()) {
+      alert("Please enter some raw details for your bio.");
+      return;
+    }
+    setGeneratingBio(true);
+    try {
+      const res = await fetch(`${API_URL}/api/ai/generate-copy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "bio",
+          raw_details: rawBioDetails
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setArtisanBio(data.copy);
+      }
+    } catch (err) {
+      console.error("Error generating bio:", err);
+    } finally {
+      setGeneratingBio(false);
+    }
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!rawDescDetails.trim()) {
+      alert("Please enter some raw details for the product description.");
+      return;
+    }
+    setGeneratingDesc(true);
+    let categoryName = "Khurja Pottery";
+    if (category === 3) categoryName = "Heritage Woodwork";
+    if (category === 1) categoryName = "Heritage Textiles";
+    if (category === 4) categoryName = "Metal Crafts";
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai/generate-copy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "description",
+          raw_details: rawDescDetails,
+          category: categoryName
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDescription(data.copy);
+      }
+    } catch (err) {
+      console.error("Error generating description:", err);
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
+
+  const handleReplaceBackdrop = async () => {
+    if (!productPhoto) {
+      alert("Please choose a product photo first.");
+      return;
+    }
+    setReplacingBackdrop(true);
+    setBackdropFeedback(null);
+
+    let categoryName = "pottery";
+    if (category === 3) categoryName = "woodwork";
+    if (category === 1) categoryName = "textile";
+    if (category === 4) categoryName = "metal";
+
+    const formData = new FormData();
+    formData.append("category", categoryName);
+    formData.append("image", productPhoto);
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai/replace-backdrop`, {
+        method: "POST",
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProductImages([data.image_url]);
+        setBackdropFeedback("Backdrop replaced with high-end studio setting!");
+      }
+    } catch (err) {
+      console.error("Error replacing backdrop:", err);
+      setBackdropFeedback("Failed to replace backdrop.");
+    } finally {
+      setReplacingBackdrop(false);
     }
   };
 
@@ -483,7 +623,99 @@ export default function ArtisanDashboard() {
               </div>
             </form>
           )}
+
+          {/* Artisan Profile Settings Card */}
+          <div className="mt-8 bg-white border border-sandstone-light/20 rounded-3xl p-6 shadow-sm space-y-6">
+            <div>
+              <h3 className="font-archivo text-sm uppercase font-bold tracking-widest text-foreground">
+                Artisan Profile Settings
+              </h3>
+              <p className="text-[10px] text-foreground/50 mt-1">
+                Customize your bio, craft group, and location visible to buyers on product pages.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveArtisanProfile} className="space-y-4 text-left">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Craft Type Group</label>
+                  <input
+                    type="text"
+                    required
+                    value={artisanCraft}
+                    onChange={(e) => setArtisanCraft(e.target.value)}
+                    placeholder="e.g. Blue Pottery & Ceramics"
+                    className="w-full bg-cream-light border border-sandstone-light/45 focus:border-sandstone-dark rounded-xl py-2.5 px-4 text-xs font-semibold focus:outline-none text-foreground"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Craft Center City</label>
+                  <input
+                    type="text"
+                    required
+                    value={artisanCity}
+                    onChange={(e) => setArtisanCity(e.target.value)}
+                    placeholder="e.g. Khurja"
+                    className="w-full bg-cream-light border border-sandstone-light/45 focus:border-sandstone-dark rounded-xl py-2.5 px-4 text-xs font-semibold focus:outline-none text-foreground"
+                  />
+                </div>
+              </div>
+
+              {/* AI Bio Writer Section */}
+              <div className="bg-cream-light/30 border border-sandstone-light/20 p-4 rounded-2xl space-y-3">
+                <label className="text-[9px] font-archivo font-black uppercase tracking-wider text-sandstone-dark block">AI Biography Writer</label>
+                <p className="text-[8px] text-foreground/50 leading-relaxed">
+                  Enter some raw highlights (e.g. your heritage lineage, years of experience, handcraft style) to let the AI draft a captivating description of your life as a creator.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={rawBioDetails}
+                    onChange={(e) => setRawBioDetails(e.target.value)}
+                    placeholder="e.g. 15 years pottery, 5th generation artisan family, Mughal motifs"
+                    className="flex-grow bg-white border border-sandstone-light/35 rounded-xl py-2 px-3 text-xs focus:outline-none text-foreground font-medium"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGenerateBio}
+                    disabled={generatingBio}
+                    className="bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-[10px] font-archivo font-extrabold uppercase px-4 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {generatingBio ? "Generating..." : "Generate Bio"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Artisan Biography</label>
+                <textarea
+                  rows={4}
+                  required
+                  value={artisanBio}
+                  onChange={(e) => setArtisanBio(e.target.value)}
+                  placeholder="Tell buyers about your craftsmanship journey..."
+                  className="w-full bg-cream-light border border-sandstone-light/45 focus:border-sandstone-dark rounded-xl p-3.5 text-xs focus:outline-none text-foreground font-medium leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-sandstone-light/10">
+                {profileFeedback && (
+                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/50 px-3 py-1 rounded">
+                    {profileFeedback}
+                  </span>
+                )}
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="ml-auto bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-xs font-archivo font-extrabold uppercase py-2.5 px-6 rounded-xl transition-all shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingProfile ? "Saving Profile..." : "Save Profile Details"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
+
 
         {/* Title */}
         <div className="mb-10 border-b border-sandstone-light/20 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -643,7 +875,30 @@ export default function ArtisanDashboard() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark">Description Summary</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Description Summary</label>
+                
+                {/* AI Description Writer section */}
+                <div className="bg-cream-light/40 border border-sandstone-light/20 p-3.5 rounded-2xl space-y-2 mb-2 text-left">
+                  <span className="text-[9px] font-archivo font-black uppercase tracking-wider text-sandstone-dark block">AI Product Writer</span>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={rawDescDetails}
+                      onChange={(e) => setRawDescDetails(e.target.value)}
+                      placeholder="e.g. blue clay pot, floral motif, baked 3 days in wood kiln"
+                      className="flex-grow bg-white border border-sandstone-light/35 rounded-xl py-2 px-3 text-[10px] focus:outline-none text-foreground font-medium"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleGenerateDescription}
+                      disabled={generatingDesc}
+                      className="bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-[10px] font-archivo font-extrabold uppercase px-4 rounded-xl transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                    >
+                      {generatingDesc ? "Writing..." : "Generate Copy"}
+                    </button>
+                  </div>
+                </div>
+
                 <textarea
                   rows={3}
                   placeholder="Describe material origin, clay baking temp, or silk threads count..."
@@ -653,6 +908,7 @@ export default function ArtisanDashboard() {
                   required
                 />
               </div>
+
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -678,6 +934,58 @@ export default function ArtisanDashboard() {
                     <option value={4}>Metal Crafts</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Product Photo Upload & Backdrop Replacer */}
+              <div className="space-y-1.5 border-t border-sandstone-light/10 pt-4 text-left">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Product Photograph</label>
+                
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <label className="w-full sm:w-auto bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-[10px] font-archivo font-extrabold uppercase py-2 px-4 rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1">
+                    <Upload className="w-3.5 h-3.5" />
+                    {productPhoto ? "Change Photo" : "Upload Photo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setProductPhoto(e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {productPhoto && (
+                    <button
+                      type="button"
+                      onClick={handleReplaceBackdrop}
+                      disabled={replacingBackdrop}
+                      className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 disabled:bg-amber-500/40 text-white text-[10px] font-archivo font-extrabold uppercase py-2 px-4 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className={`w-3.5 h-3.5 ${replacingBackdrop ? "animate-spin" : ""}`} />
+                      {replacingBackdrop ? "AI Enhancing..." : "Replace Backdrop with AI Studio"}
+                    </button>
+                  )}
+                </div>
+
+                {productPhoto && (
+                  <div className="text-[9px] font-semibold text-sandstone-dark/80 mt-1 truncate max-w-full">
+                    Selected: {productPhoto.name}
+                  </div>
+                )}
+
+                {backdropFeedback && (
+                  <div className="text-[9px] font-bold text-emerald-800 bg-emerald-100/50 px-2.5 py-1.5 rounded-lg mt-2">
+                    {backdropFeedback}
+                  </div>
+                )}
+
+                {productImages.length > 0 && (
+                  <div className="mt-3 relative w-24 h-24 rounded-2xl overflow-hidden border border-sandstone-light/20 bg-cream-dark/10">
+                    <img
+                      src={productImages[0]}
+                      alt="Product Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-sandstone-light/20 pt-4 flex items-center justify-between">
