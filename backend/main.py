@@ -29,6 +29,17 @@ app.mount("/static", StaticFiles(directory="uploads"), name="static")
 @app.on_event("startup")
 def on_startup():
     init_db()
+    # Auto-seed if database is unseeded
+    from sqlmodel import Session, select
+    from seed import seed_data
+    import models
+    try:
+        with Session(engine) as session:
+            if not session.exec(select(models.Category)).first():
+                print("Database is empty. Auto-seeding default categories, users, and products...")
+                seed_data()
+    except Exception as e:
+        print(f"Error during database auto-seeding: {e}")
 
 # --- Pydantic Request Schemas ---
 from pydantic import BaseModel

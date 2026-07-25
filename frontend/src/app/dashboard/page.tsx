@@ -85,6 +85,7 @@ export default function ArtisanDashboard() {
   const [description, setDescription] = useState("");
   const [basePrice, setBasePrice] = useState(1200);
   const [category, setCategory] = useState(2); // 2 = Khurja Pottery
+  const [categories, setCategories] = useState<any[]>([]);
   const [isCustomizable, setIsCustomizable] = useState(true);
   const [productImages, setProductImages] = useState<string[]>([
     "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80"
@@ -133,6 +134,19 @@ export default function ArtisanDashboard() {
         setArtisanBio(artData.bio || "");
         setArtisanCity(artData.city || "");
         setArtisanCraft(artData.craft_type || "");
+      }
+
+      // Load categories from backend
+      const catRes = await fetch(`${API_URL}/api/categories`);
+      if (catRes.ok) {
+        const catData = await catRes.json();
+        setCategories(catData);
+        if (catData.length > 0) {
+          const hasDefault = catData.some((c: any) => c.id === category);
+          if (!hasDefault) {
+            setCategory(catData[0].id);
+          }
+        }
       }
     } catch (err) {
       console.error("Dashboard products loading error:", err);
@@ -928,13 +942,24 @@ export default function ArtisanDashboard() {
                     onChange={(e) => setCategory(Number(e.target.value))}
                     className="w-full bg-cream-light border border-sandstone-light/45 focus:border-sandstone-dark rounded-xl py-2.5 px-4 text-xs font-bold focus:outline-none text-foreground"
                   >
-                    <option value={3}>Heritage Woodwork</option>
-                    <option value={2}>Khurja Pottery</option>
-                    <option value={1}>Heritage Textiles</option>
-                    <option value={4}>Metal Crafts</option>
+                    {categories.length > 0 ? (
+                      categories.map((cat: any) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value={3}>Heritage Woodwork</option>
+                        <option value={2}>Khurja Pottery</option>
+                        <option value={1}>Heritage Textiles</option>
+                        <option value={4}>Metal Crafts</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
+
 
               {/* Product Photo Upload & Backdrop Replacer */}
               <div className="space-y-1.5 border-t border-sandstone-light/10 pt-4 text-left">

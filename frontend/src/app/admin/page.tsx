@@ -78,6 +78,7 @@ export default function AdminPortal() {
   const [description, setDescription] = useState("");
   const [basePrice, setBasePrice] = useState(1200);
   const [category, setCategory] = useState(3); // Default category (1=Textiles, 2=Pottery, 3=Woodwork)
+  const [categories, setCategories] = useState<any[]>([]);
   const [isCustomizable, setIsCustomizable] = useState(true);
   const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -225,6 +226,19 @@ export default function AdminPortal() {
       if (pickupRes.ok) {
         const pickupData = await pickupRes.json();
         setPickupOrders(pickupData);
+      }
+
+      // Fetch Categories
+      const catRes = await fetch(`${API_URL}/api/categories`);
+      if (catRes.ok) {
+        const catData = await catRes.json();
+        setCategories(catData);
+        if (catData.length > 0) {
+          const hasDefault = catData.some((c: any) => c.id === category);
+          if (!hasDefault) {
+            setCategory(catData[0].id);
+          }
+        }
       }
     } catch (err) {
       console.error("Error fetching admin archives:", err);
@@ -702,10 +716,20 @@ export default function AdminPortal() {
                           onChange={(e) => setCategory(Number(e.target.value))}
                           className="w-full bg-cream-light border border-sandstone-light/45 focus:border-sandstone-dark rounded-xl py-2.5 px-3 text-foreground focus:outline-none font-bold"
                         >
-                          <option value={3}>Woodwork & Bamboo</option>
-                          <option value={2}>Khurja Pottery</option>
-                          <option value={1}>Heritage Textiles</option>
-                          <option value={4}>Metal Crafts</option>
+                          {categories.length > 0 ? (
+                            categories.map((cat: any) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </option>
+                            ))
+                          ) : (
+                            <>
+                              <option value={3}>Woodwork & Bamboo</option>
+                              <option value={2}>Khurja Pottery</option>
+                              <option value={1}>Heritage Textiles</option>
+                              <option value={4}>Metal Crafts</option>
+                            </>
+                          )}
                         </select>
                       </div>
                     </div>
