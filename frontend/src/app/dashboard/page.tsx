@@ -76,7 +76,6 @@ export default function ArtisanDashboard() {
   const [rawDescDetails, setRawDescDetails] = useState("");
   const [generatingDesc, setGeneratingDesc] = useState(false);
 
-  const [productPhoto, setProductPhoto] = useState<File | null>(null);
   const [replacingBackdrop, setReplacingBackdrop] = useState(false);
   const [backdropFeedback, setBackdropFeedback] = useState<string | null>(null);
 
@@ -87,9 +86,7 @@ export default function ArtisanDashboard() {
   const [category, setCategory] = useState(2); // 2 = Khurja Pottery
   const [categories, setCategories] = useState<any[]>([]);
   const [isCustomizable, setIsCustomizable] = useState(true);
-  const [productImages, setProductImages] = useState<string[]>([
-    "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80"
-  ]);
+  const [productImages, setProductImages] = useState<string[]>([]);
 
   // AI Suggestion State
   const [aiSuggesting, setAiSuggesting] = useState(false);
@@ -309,11 +306,39 @@ export default function ArtisanDashboard() {
     }
   };
 
-  const handleReplaceBackdrop = async () => {
-    if (!productPhoto) {
-      alert("Please choose a product photo first.");
+  const handlePhotoUpload = async (file: File) => {
+    if (productImages.length >= 6) {
+      alert("Maximum 6 photos are allowed.");
       return;
     }
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const absoluteUrl = data.url.startsWith("http") ? data.url : `${API_URL}${data.url}`;
+        setProductImages(prev => [...prev, absoluteUrl]);
+      } else {
+        alert("Failed to upload photo.");
+      }
+    } catch (err) {
+      console.error("Error uploading photo:", err);
+      alert("Error uploading photo.");
+    }
+  };
+
+  const handleRemovePhoto = (idxToRemove: number) => {
+    setProductImages(prev => prev.filter((_, idx) => idx !== idxToRemove));
+  };
+
+  const handleReplaceBackdropAtIndex = async (idx: number) => {
+    const imageUrl = productImages[idx];
+    if (!imageUrl) return;
+
     setReplacingBackdrop(true);
     setBackdropFeedback(null);
 
@@ -322,18 +347,27 @@ export default function ArtisanDashboard() {
     if (category === 1) categoryName = "textile";
     if (category === 4) categoryName = "metal";
 
-    const formData = new FormData();
-    formData.append("category", categoryName);
-    formData.append("image", productPhoto);
-
     try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const file = new File([blob], "product.png", { type: blob.type });
+
+      const formData = new FormData();
+      formData.append("category", categoryName);
+      formData.append("image", file);
+
       const res = await fetch(`${API_URL}/api/ai/replace-backdrop`, {
         method: "POST",
         body: formData
       });
       if (res.ok) {
         const data = await res.json();
-        setProductImages([data.image_url]);
+        const absoluteUrl = data.image_url.startsWith("http") ? data.image_url : `${API_URL}${data.image_url}`;
+        setProductImages(prev => {
+          const updated = [...prev];
+          updated[idx] = absoluteUrl;
+          return updated;
+        });
         setBackdropFeedback("Backdrop replaced with high-end studio setting!");
       }
     } catch (err) {
@@ -343,6 +377,7 @@ export default function ArtisanDashboard() {
       setReplacingBackdrop(false);
     }
   };
+
 
   // Trigger AI product metadata suggestion and quality price validation
   const handleAiSuggest = async () => {
@@ -961,57 +996,72 @@ export default function ArtisanDashboard() {
               </div>
 
 
-              {/* Product Photo Upload & Backdrop Replacer */}
-              <div className="space-y-1.5 border-t border-sandstone-light/10 pt-4 text-left">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Product Photograph</label>
+              {/* Product Photos Grid (up to 6) */}
+              <div className="space-y-3 border-t border-sandstone-light/10 pt-4 text-left">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Product Photographs (Up to 6)</label>
+                  <span className="text-[9px] font-bold text-foreground/50">{productImages.length}/6 Uploaded</span>
+                </div>
                 
-                <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <label className="w-full sm:w-auto bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-[10px] font-archivo font-extrabold uppercase py-2 px-4 rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1">
-                    <Upload className="w-3.5 h-3.5" />
-                    {productPhoto ? "Change Photo" : "Upload Photo"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setProductPhoto(e.target.files?.[0] || null)}
-                      className="hidden"
-                    />
-                  </label>
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+                  {productImages.map((imgUrl, idx) => (
+                    <div key={idx} className="relative group aspect-square rounded-2xl overflow-hidden border border-sandstone-light/20 bg-cream-dark/10 shadow-sm">
+                      <img
+                        src={imgUrl}
+                        alt={`Product Photo ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-1.5 p-2">
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(idx)}
+                          className="bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-archivo font-extrabold uppercase py-1 px-2.5 rounded-lg transition-all cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                        {idx === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleReplaceBackdropAtIndex(idx)}
+                            disabled={replacingBackdrop}
+                            className="bg-amber-600 hover:bg-amber-700 text-white text-[9px] font-archivo font-extrabold uppercase py-1 px-2.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {replacingBackdrop ? "Enhancing..." : "AI Backdrop"}
+                          </button>
+                        )}
+                      </div>
+                      {idx === 0 && (
+                        <span className="absolute bottom-1.5 left-1.5 bg-sandstone-dark text-white text-[8px] font-archivo font-black uppercase px-2 py-0.5 rounded-md shadow">
+                          Primary
+                        </span>
+                      )}
+                    </div>
+                  ))}
 
-                  {productPhoto && (
-                    <button
-                      type="button"
-                      onClick={handleReplaceBackdrop}
-                      disabled={replacingBackdrop}
-                      className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 disabled:bg-amber-500/40 text-white text-[10px] font-archivo font-extrabold uppercase py-2 px-4 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Sparkles className={`w-3.5 h-3.5 ${replacingBackdrop ? "animate-spin" : ""}`} />
-                      {replacingBackdrop ? "AI Enhancing..." : "Replace Backdrop with AI Studio"}
-                    </button>
+                  {productImages.length < 6 && (
+                    <label className="aspect-square border-2 border-dashed border-sandstone-light/40 hover:border-sandstone-dark rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all bg-cream-light/30 hover:bg-cream-light/50">
+                      <Upload className="w-5 h-5 text-sandstone-dark mb-1" />
+                      <span className="text-[9px] font-archivo font-black uppercase tracking-wider text-sandstone-dark">Add Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handlePhotoUpload(file);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
                   )}
                 </div>
-
-                {productPhoto && (
-                  <div className="text-[9px] font-semibold text-sandstone-dark/80 mt-1 truncate max-w-full">
-                    Selected: {productPhoto.name}
-                  </div>
-                )}
 
                 {backdropFeedback && (
                   <div className="text-[9px] font-bold text-emerald-800 bg-emerald-100/50 px-2.5 py-1.5 rounded-lg mt-2">
                     {backdropFeedback}
                   </div>
                 )}
-
-                {productImages.length > 0 && (
-                  <div className="mt-3 relative w-24 h-24 rounded-2xl overflow-hidden border border-sandstone-light/20 bg-cream-dark/10">
-                    <img
-                      src={productImages[0]}
-                      alt="Product Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
               </div>
+
 
               <div className="border-t border-sandstone-light/20 pt-4 flex items-center justify-between">
                 <div>

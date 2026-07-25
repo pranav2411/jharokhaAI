@@ -968,6 +968,7 @@ def api_check_feasibility(req: CustomizationFeasibilityRequest):
 
 @app.post("/api/ai/replace-backdrop")
 def api_replace_backdrop(
+    request: Request,
     category: str = Form(...),
     image: UploadFile = File(...)
 ):
@@ -981,9 +982,10 @@ def api_replace_backdrop(
     else:
         url = "/static/studio_metal.png"
         
+    base_url = str(request.base_url).rstrip("/")
     return {
         "success": True,
-        "image_url": url,
+        "image_url": f"{base_url}{url}",
         "reason": f"AI backdrop replacement completed successfully for {category} category."
     }
 
