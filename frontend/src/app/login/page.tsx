@@ -553,7 +553,6 @@ export default function LoginPage() {
                           : "bg-cream-light/20 border-sandstone-light/40 text-sandstone-dark hover:border-sandstone-light"
                       }`}
                     >
-                      <span className="text-lg">🛒</span>
                       <span>Buyer / Customer</span>
                     </button>
                     <button
@@ -565,7 +564,6 @@ export default function LoginPage() {
                           : "bg-cream-light/20 border-sandstone-light/40 text-sandstone-dark hover:border-sandstone-light"
                       }`}
                     >
-                      <span className="text-lg">🏺</span>
                       <span>Seller / Artisan</span>
                     </button>
                   </div>
