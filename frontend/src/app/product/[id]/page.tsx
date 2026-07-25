@@ -244,6 +244,82 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
   const [textInputs, setTextInputs] = useState<Record<string, string>>({});
   const [studioActive, setStudioActive] = useState(false);
 
+  // AI Co-Creation Assistant Chat States
+  const [chatMessages, setChatMessages] = useState<Array<{role: "user" | "bot", message: string}>>([
+    {role: "bot", message: "Namaste! I am the virtual Artisan Assistant. Would you like to check custom dimensions, paint colors, materials, or configure a customized request? Just describe what you want!"}
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatSending, setChatSending] = useState(false);
+  const [aiCustomConfig, setAiCustomConfig] = useState<any>(null);
+
+  const handleSendChatMessage = async () => {
+    if (!chatInput.trim()) return;
+    
+    const userMsg = chatInput;
+    setChatInput("");
+    setChatMessages(prev => [...prev, { role: "user", message: userMsg }]);
+    setChatSending(true);
+    
+    // Construct chat history for Gemini endpoint
+    const history = chatMessages.map(m => ({
+      role: m.role === "user" ? "user" : "model",
+      message: m.message
+    }));
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_history: history,
+          user_message: userMsg,
+          product_id: productId
+        })
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        setChatMessages(prev => [...prev, { role: "bot", message: result.reply }]);
+        if (result.customization_detected && result.customizations && Object.keys(result.customizations).length > 0) {
+          setAiCustomConfig(result);
+        }
+      } else {
+        setChatMessages(prev => [...prev, { role: "bot", message: "Sorry, I am having trouble connecting to the artisan assistant right now." }]);
+      }
+    } catch (err) {
+      console.error("Chatbot api error:", err);
+      setChatMessages(prev => [...prev, { role: "bot", message: "I apologize, I am temporarily offline." }]);
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  const handleApplyAiConfig = () => {
+    if (!aiCustomConfig || !aiCustomConfig.customizations) return;
+    
+    const nextSelections = { ...selections };
+    const nextTexts = { ...textInputs };
+    
+    Object.entries(aiCustomConfig.customizations).forEach(([optName, val]: [string, any]) => {
+      const optionDef = product.customization_options.find((o: any) => o.option_name === optName);
+      if (optionDef) {
+        if (optionDef.option_type === "text") {
+          nextTexts[optName] = String(val);
+        } else if (Array.isArray(optionDef.choices)) {
+          const matchedChoice = optionDef.choices.find((c: any) => c.name === val);
+          if (matchedChoice) {
+            nextSelections[optName] = matchedChoice;
+          }
+        }
+      }
+    });
+    
+    setSelections(nextSelections);
+    setTextInputs(nextTexts);
+    setAiCustomConfig(null);
+    alert("AI custom configurations applied successfully!");
+  };
+
   // Review writing state
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -743,6 +819,80 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
 
                   return null;
                 })}
+              </div>
+            )}
+
+            {/* AI Co-Creation Assistant Widget */}
+            {product && product.is_customizable && (
+              <div className="bg-cream-dark/20 border border-sandstone-light/15 rounded-2xl p-4.5 space-y-3.5 my-6">
+                <div className="flex items-center gap-1.5 border-b border-sandstone-light/15 pb-2">
+                  <Sparkles className="w-4 h-4 text-coral-accent animate-pulse" />
+                  <h4 className="text-[10px] uppercase font-archivo font-extrabold tracking-wider text-foreground">AI Co-Creation Assistant</h4>
+                </div>
+
+                {/* Message display log */}
+                <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+                  {chatMessages.map((msg, index) => (
+                    <div key={index} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`p-3 rounded-2xl text-[10px] leading-relaxed max-w-[85%] font-medium ${
+                        msg.role === "user" 
+                          ? "bg-sandstone-dark text-white rounded-tr-none" 
+                          : "bg-cream-light text-foreground/80 border border-sandstone-light/10 rounded-tl-none"
+                      }`}>
+                        {msg.message}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Suggestion config card */}
+                {aiCustomConfig && (
+                  <div className="bg-white/95 rounded-xl border border-coral-accent/30 p-3 space-y-2 shadow-sm animate-fade-in-up">
+                    <p className="text-[9px] uppercase font-archivo font-extrabold tracking-wider text-coral-accent flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-coral-accent" /> AI Customization Configured
+                    </p>
+                    <div className="text-[9px] font-semibold text-foreground/80 space-y-1 pl-1">
+                      {Object.entries(aiCustomConfig.customizations).map(([k, v]: [string, any]) => (
+                        <div key={k} className="flex justify-between">
+                          <span>{k}:</span>
+                          <span className="font-bold text-sandstone-dark">{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] text-coral-accent pt-1.5 border-t border-sandstone-light/10">
+                      <span>Evaluated Price:</span>
+                      <span className="font-black text-xs">₹{aiCustomConfig.custom_price}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyAiConfig}
+                      className="w-full bg-coral-accent hover:bg-coral-accent/85 text-white text-[9px] font-archivo font-black uppercase py-2 rounded-lg transition-all"
+                    >
+                      Apply AI Custom Setup
+                    </button>
+                  </div>
+                )}
+
+                {/* Input box */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Describe custom features (e.g. Cobalt Blue)..."
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendChatMessage()}
+                    disabled={chatSending}
+                    className="flex-grow bg-cream-light border border-sandstone-light/40 focus:border-sandstone-dark rounded-xl py-2 px-3 text-[10px] focus:outline-none text-foreground font-semibold"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendChatMessage}
+                    disabled={chatSending}
+                    className="bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-[10px] font-archivo font-black uppercase px-3.5 py-2 rounded-xl transition-all shrink-0"
+                  >
+                    {chatSending ? "..." : "Send"}
+                  </button>
+                </div>
               </div>
             )}
 

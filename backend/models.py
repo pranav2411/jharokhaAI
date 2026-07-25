@@ -25,6 +25,8 @@ class Artisan(SQLModel, table=True):
     city: str
     rating: float = Field(default=5.0)
     photo_url: Optional[str] = None
+    is_verified: bool = Field(default=False)
+    verification_document: Optional[str] = Field(default=None)
 
     # Relationships
     user: User = Relationship(back_populates="artisan_profile")
@@ -51,6 +53,9 @@ class Product(SQLModel, table=True):
     stock_qty: int = Field(default=10)
     images: List[str] = Field(default=[], sa_column=Column(JSON))
     status: str = Field(default="active")  # active, draft, sold_out
+    pricing_formula: Optional[str] = Field(default=None)
+    quality_rating: Optional[float] = Field(default=None)
+    price_fairness: Optional[str] = Field(default=None)
 
     # Relationships
     artisan: Artisan = Relationship(back_populates="products")

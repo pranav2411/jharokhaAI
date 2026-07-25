@@ -4,6 +4,7 @@ backend/__pycache__/
 backend/*.pyc
 backend/*.db
 backend/uploads/
+backend/.env*
 
 # Node / Next.js / Frontend
 frontend/.next/

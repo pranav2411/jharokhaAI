@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { 
   Plus, Edit2, Trash2, LayoutDashboard, ShoppingCart, MessageSquare, 
   IndianRupee, Upload, Sparkles, Check, Settings, ShieldAlert, AlertCircle,
-  UserPlus, Shield, PhoneCall, Trash, X
+  UserPlus, Shield, PhoneCall, Trash, X, ShieldCheck, Truck
 } from "lucide-react";
 import Link from "next/link";
 import { API_URL } from "@/config";
@@ -57,7 +57,7 @@ export default function AdminPortal() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Tab control
-  const [activeTab, setActiveTab] = useState<"analytics" | "products" | "orders" | "reviews" | "payments" | "featured" | "admins" | "callbacks">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "products" | "orders" | "reviews" | "payments" | "featured" | "admins" | "callbacks" | "verification" | "fulfillment">("analytics");
 
   // Data states
   const [products, setProducts] = useState<any[]>([]);
@@ -67,6 +67,9 @@ export default function AdminPortal() {
   const [users, setUsers] = useState<any[]>([]);
   const [callbackRequests, setCallbackRequests] = useState<any[]>([]);
   const [featuredIds, setFeaturedIds] = useState<number[]>([]);
+  
+  const [unverifiedArtisans, setUnverifiedArtisans] = useState<any[]>([]);
+  const [pickupOrders, setPickupOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form states (Product creation/edit)
@@ -209,10 +212,65 @@ export default function AdminPortal() {
         const callbacksData = await callbacksRes.json();
         setCallbackRequests(callbacksData);
       }
+
+      // Fetch Unverified Artisans
+      const artRes = await fetch(`${API_URL}/api/admin/unverified-artisans`);
+      if (artRes.ok) {
+        const artData = await artRes.json();
+        setUnverifiedArtisans(artData);
+      }
+
+      // Fetch Pickup Orders
+      const pickupRes = await fetch(`${API_URL}/api/admin/notifications`);
+      if (pickupRes.ok) {
+        const pickupData = await pickupRes.json();
+        setPickupOrders(pickupData);
+      }
     } catch (err) {
-      console.error("Error fetching admin archives from backend:", err);
+      console.error("Error fetching admin archives:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyArtisan = async (artisanId: number) => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/artisans/${artisanId}/verify`, {
+        method: "PUT"
+      });
+      if (res.ok) {
+        alert("Artisan verified successfully!");
+        const artRes = await fetch(`${API_URL}/api/admin/unverified-artisans`);
+        if (artRes.ok) {
+          setUnverifiedArtisans(await artRes.json());
+        }
+      }
+    } catch (err) {
+      console.error("Failed to verify artisan:", err);
+    }
+  };
+
+  const handleUpdatePickupStatus = async (orderId: number, status: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        alert(`Order status updated to ${status}!`);
+        // Refresh
+        const pickupRes = await fetch(`${API_URL}/api/admin/notifications`);
+        if (pickupRes.ok) {
+          setPickupOrders(await pickupRes.json());
+        }
+        const orderRes = await fetch(`${API_URL}/api/admin/orders`);
+        if (orderRes.ok) {
+          setOrders(await orderRes.json());
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err);
     }
   };
 
@@ -475,6 +533,8 @@ export default function AdminPortal() {
             { id: "featured", label: "Featured Selection", icon: <Sparkles className="w-4 h-4" /> },
             { id: "admins", label: "Admin Users", icon: <UserPlus className="w-4 h-4" /> },
             { id: "callbacks", label: "Callback Requests", icon: <PhoneCall className="w-4 h-4" /> },
+            { id: "verification", label: "Artisan Verification", icon: <ShieldCheck className="w-4 h-4" /> },
+            { id: "fulfillment", label: "Pickup Routing Hub", icon: <Truck className="w-4 h-4" /> },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1407,6 +1467,155 @@ export default function AdminPortal() {
                     ) : (
                       <tr>
                         <td colSpan={5} className="p-6 text-foreground/45 text-center">No callback requests recorded.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 9: Artisan Identity Verification Queue */}
+          {activeTab === "verification" && (
+            <div className="space-y-6">
+              <div>
+                <span className="text-coral-accent font-archivo text-xs uppercase tracking-widest font-extrabold">Artisan Management</span>
+                <h2 className="font-archivo text-xl uppercase font-bold text-foreground mt-0.5">Verification Queue</h2>
+                <div className="w-12 h-0.5 bg-sandstone-light mt-2" />
+              </div>
+
+              <p className="text-xs text-sandstone-light max-w-2xl leading-relaxed">
+                Approve or reject artisans who have submitted identity files. AI pre-screens files for accuracy.
+              </p>
+
+              <div className="bg-white border border-sandstone-light/20 rounded-xl overflow-hidden text-xs shadow-sm">
+                <table className="w-full text-left border-collapse border-spacing-0">
+                  <thead>
+                    <tr className="bg-cream-dark/50 border-b border-sandstone-light/15 font-archivo text-[10px] uppercase font-bold tracking-widest text-olive-dark">
+                      <th className="p-4">Artisan ID</th>
+                      <th className="p-4">Name</th>
+                      <th className="p-4">Craft Specialty</th>
+                      <th className="p-4">City</th>
+                      <th className="p-4">Submitted ID File</th>
+                      <th className="p-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sandstone-light/10">
+                    {unverifiedArtisans && unverifiedArtisans.length > 0 ? (
+                      unverifiedArtisans.map((art: any) => (
+                        <tr key={art.id} className="hover:bg-cream-dark/10 transition-colors">
+                          <td className="p-4 font-mono font-bold">#ART-{art.id}</td>
+                          <td className="p-4 font-semibold text-foreground">{art.name}</td>
+                          <td className="p-4 text-foreground/75">{art.craft_type}</td>
+                          <td className="p-4 text-foreground/75">{art.city}</td>
+                          <td className="p-4 text-foreground/75">
+                            {art.verification_document ? (
+                              <a
+                                href={`${API_URL}${art.verification_document}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-coral-accent hover:underline font-semibold"
+                              >
+                                View ID Document
+                              </a>
+                            ) : (
+                              <span className="text-foreground/40 italic">No Document Uploaded</span>
+                            )}
+                          </td>
+                          <td className="p-4 text-right">
+                            <button
+                              onClick={() => handleVerifyArtisan(art.id)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-archivo text-[9px] font-extrabold uppercase px-3.5 py-1.5 rounded-lg transition-all shadow-sm cursor-pointer"
+                            >
+                              Verify Artisan
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="p-6 text-foreground/45 text-center">No artisans awaiting verification. All guilds cleared!</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 10: Pickup Notifications and Fulfillment Hub */}
+          {activeTab === "fulfillment" && (
+            <div className="space-y-6">
+              <div>
+                <span className="text-coral-accent font-archivo text-xs uppercase tracking-widest font-extrabold">Delivery Routing</span>
+                <h2 className="font-archivo text-xl uppercase font-bold text-foreground mt-0.5">Pickup Routing Hub</h2>
+                <div className="w-12 h-0.5 bg-sandstone-light mt-2" />
+              </div>
+
+              <p className="text-xs text-sandstone-light max-w-2xl leading-relaxed">
+                Orders flagged as "Ready for Pickup" by artisan partners. Assign delivery states and trace final transport routing.
+              </p>
+
+              <div className="bg-white border border-sandstone-light/20 rounded-xl overflow-hidden text-xs shadow-sm">
+                <table className="w-full text-left border-collapse border-spacing-0">
+                  <thead>
+                    <tr className="bg-cream-dark/50 border-b border-sandstone-light/15 font-archivo text-[10px] uppercase font-bold tracking-widest text-olive-dark">
+                      <th className="p-4">Order ID</th>
+                      <th className="p-4">Delivery Address</th>
+                      <th className="p-4">Creations List</th>
+                      <th className="p-4">Total (INR)</th>
+                      <th className="p-4">Fulfillment State</th>
+                      <th className="p-4 text-right">Dispatch Control</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sandstone-light/10">
+                    {pickupOrders && pickupOrders.length > 0 ? (
+                      pickupOrders.map((ord: any) => (
+                        <tr key={ord.id} className="hover:bg-cream-dark/10 transition-colors">
+                          <td className="p-4 font-mono font-bold">#ORD-{ord.id}</td>
+                          <td className="p-4 text-foreground/75 leading-relaxed">{ord.shipping_address}</td>
+                          <td className="p-4 text-foreground/75 leading-relaxed">
+                            <ul className="list-disc list-inside font-semibold">
+                              {ord.items.map((it: any, index: number) => (
+                                <li key={index}>
+                                  {it.product_title} (x{it.qty})
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                          <td className="p-4 font-semibold text-foreground">₹{ord.total}</td>
+                          <td className="p-4">
+                            <span className={`inline-flex items-center gap-1 text-[8px] font-archivo font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                              ord.status === "ready_for_pickup"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}>
+                              {ord.status.replace(/_/g, ' ')}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right space-y-1">
+                            {ord.status === "ready_for_pickup" && (
+                              <button
+                                onClick={() => handleUpdatePickupStatus(ord.id, "out_for_delivery")}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-archivo text-[9px] font-extrabold uppercase py-1.5 px-2.5 rounded-lg transition-all cursor-pointer"
+                              >
+                                Ship Delivery
+                              </button>
+                            )}
+                            {ord.status === "out_for_delivery" && (
+                              <button
+                                onClick={() => handleUpdatePickupStatus(ord.id, "delivered")}
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-archivo text-[9px] font-extrabold uppercase py-1.5 px-2.5 rounded-lg transition-all cursor-pointer"
+                              >
+                                Mark Delivered
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="p-6 text-foreground/45 text-center">No active pickup or shipping workflows.</td>
                       </tr>
                     )}
                   </tbody>

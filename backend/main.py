@@ -1,12 +1,14 @@
 from typing import List, Optional, Dict, Any
 import os
 import shutil
-from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, File, Request
+from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, File, Request, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select, and_
 from database import engine, init_db, get_session
 import models
+import ai_service
+import sandbox
 
 app = FastAPI(title="Jharokha Artisan Marketplace API")
 
@@ -251,6 +253,7 @@ def get_artisan(artisan_id: int, session: Session = Depends(get_session)):
         "city": artisan.city,
         "rating": artisan.rating,
         "photo_url": artisan.photo_url,
+        "is_verified": artisan.is_verified,
         "user": user,
         "products": products
     }
@@ -409,6 +412,9 @@ def get_product(product_id: int, session: Session = Depends(get_session)):
         "stock_qty": product.stock_qty,
         "images": product.images,
         "status": product.status,
+        "pricing_formula": product.pricing_formula,
+        "quality_rating": product.quality_rating,
+        "price_fairness": product.price_fairness,
         "artisan": {
             "id": artisan.id if artisan else None,
             "name": artisan_user.name if artisan_user else "Unknown Artisan",
@@ -416,7 +422,8 @@ def get_product(product_id: int, session: Session = Depends(get_session)):
             "craft_type": artisan.craft_type if artisan else "",
             "city": artisan.city if artisan else "",
             "rating": artisan.rating if artisan else 5.0,
-            "photo_url": artisan.photo_url if artisan else None
+            "photo_url": artisan.photo_url if artisan else None,
+            "is_verified": artisan.is_verified if artisan else False
         },
         "category": {
             "id": category.id if category else None,
@@ -919,5 +926,225 @@ def resolve_callback_request(id: int, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(db_req)
     return db_req
+
+# --- AI Integration Endpoints ---
+
+@app.post("/api/ai/verify-seller")
+def api_verify_seller(
+    artisan_id: int = Form(...),
+    document: UploadFile = File(...),
+    session: Session = Depends(get_session)
+):
+    artisan = session.get(models.Artisan, artisan_id)
+    if not artisan:
+        raise HTTPException(status_code=404, detail="Artisan not found")
+    
+    # Save the file locally to uploads folder
+    os.makedirs("uploads", exist_ok=True)
+    file_path = os.path.join("uploads", f"artisan_{artisan_id}_{document.filename}")
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(document.file, buffer)
+        
+    # Read bytes for AI service
+    with open(file_path, "rb") as f:
+        doc_bytes = f.read()
+        
+    # Call AI verifier
+    verification_res = ai_service.verify_artisan_document(doc_bytes, document.filename)
+    
+    if verification_res.get("is_verified", False):
+        artisan.is_verified = True
+        artisan.verification_document = f"/static/artisan_{artisan_id}_{document.filename}"
+        session.add(artisan)
+        session.commit()
+        session.refresh(artisan)
+        
+    return verification_res
+
+@app.post("/api/ai/suggest-product")
+def api_suggest_product(
+    description: str = Form(...),
+    requested_price: float = Form(...),
+    image: UploadFile = File(...),
+    session: Session = Depends(get_session)
+):
+    # Save image file locally
+    os.makedirs("uploads", exist_ok=True)
+    file_path = os.path.join("uploads", f"temp_{image.filename}")
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(image.file, buffer)
+        
+    with open(file_path, "rb") as f:
+        img_bytes = f.read()
+        
+    # Process with Gemini
+    ai_suggestions = ai_service.suggest_and_verify_product(img_bytes, description, requested_price)
+    
+    # Keep the path of the uploaded file for return
+    ai_suggestions["temp_image_url"] = f"/static/temp_{image.filename}"
+    return ai_suggestions
+
+class MarketingRequestPayload(BaseModel):
+    product_id: int
+
+@app.post("/api/ai/marketing")
+def api_generate_marketing(payload: MarketingRequestPayload, session: Session = Depends(get_session)):
+    product = session.get(models.Product, payload.product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    campaign = ai_service.generate_marketing_campaign(product.title, product.description, product.base_price)
+    return campaign
+
+class ChatRequestPayload(BaseModel):
+    chat_history: List[Dict[str, str]]
+    user_message: str
+    product_id: int
+
+@app.post("/api/ai/chat")
+def api_chat_assistant(payload: ChatRequestPayload, session: Session = Depends(get_session)):
+    product = session.get(models.Product, payload.product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
+    artisan = session.get(models.Artisan, product.artisan_id)
+    artisan_user = session.get(models.User, artisan.user_id) if artisan else None
+    
+    product_dict = {
+        "title": product.title,
+        "description": product.description,
+        "base_price": product.base_price,
+        "customization_options": [],
+        "artisan": {
+            "name": artisan_user.name if artisan_user else "Unknown Artisan"
+        }
+    }
+    
+    # Fetch customization options structure for prompt
+    options = session.exec(select(models.CustomizationOption).where(models.CustomizationOption.product_id == product.id)).all()
+    for opt in options:
+        product_dict["customization_options"].append({
+            "option_name": opt.option_name,
+            "option_type": opt.option_type,
+            "choices": opt.choices
+        })
+        
+    res = ai_service.chat_with_artisan_assistant(payload.chat_history, payload.user_message, product_dict)
+    
+    # If custom specs are detected by AI, compute the custom price in the subprocess sandbox
+    custom_price = product.base_price
+    if res.get("customization_detected", False) and res.get("customizations"):
+        if product.pricing_formula:
+            sandbox_res = sandbox.run_in_sandbox(product.pricing_formula, res["customizations"], product.base_price)
+            if sandbox_res["success"]:
+                custom_price = sandbox_res["result"]
+            else:
+                # Fallback to standard price computation (price additions) if sandbox fails
+                print(f"Chatbot sandbox computation failed: {sandbox_res['error']}")
+                for opt in options:
+                    selection = res["customizations"].get(opt.option_name)
+                    if selection and isinstance(opt.choices, list):
+                        for choice in opt.choices:
+                            if isinstance(choice, dict) and choice.get("name") == selection:
+                                custom_price += float(choice.get("price", 0.0))
+        else:
+            # Traditional price check
+            for opt in options:
+                selection = res["customizations"].get(opt.option_name)
+                if selection and isinstance(opt.choices, list):
+                    for choice in opt.choices:
+                        if isinstance(choice, dict) and choice.get("name") == selection:
+                            custom_price += float(choice.get("price", 0.0))
+                            
+    res["custom_price"] = custom_price
+    return res
+
+class TestFormulaPayload(BaseModel):
+    instructions: str
+    test_customizations: Dict[str, Any]
+    base_price: float
+
+@app.post("/api/ai/sandbox/test-formula")
+def api_test_formula(payload: TestFormulaPayload):
+    res = sandbox.validate_and_heal_formula(
+        payload.instructions,
+        payload.test_customizations,
+        payload.base_price
+    )
+    return res
+
+# --- Order Pickup and Admin Routing ---
+
+@app.put("/api/orders/{order_id}/pickup")
+def mark_order_ready_for_pickup(order_id: int, session: Session = Depends(get_session)):
+    order = session.get(models.Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    order.status = "ready_for_pickup"
+    session.add(order)
+    session.commit()
+    session.refresh(order)
+    return {"message": "Order marked ready for pickup. Admin notified.", "status": order.status}
+
+@app.get("/api/admin/notifications")
+def get_pickup_notifications(session: Session = Depends(get_session)):
+    # Returns all orders that are ready_for_pickup or active courier states
+    statement = select(models.Order).where(models.Order.status.in_(["ready_for_pickup", "out_for_delivery"]))
+    orders = session.exec(statement).all()
+    
+    hydrated = []
+    for order in orders:
+        items_statement = select(models.OrderItem).where(models.OrderItem.order_id == order.id)
+        items = session.exec(items_statement).all()
+        
+        items_hydrated = []
+        for it in items:
+            prod = session.get(models.Product, it.product_id)
+            items_hydrated.append({
+                "id": it.id,
+                "qty": it.qty,
+                "customizations": it.customizations,
+                "price_at_purchase": it.price_at_purchase,
+                "product_title": prod.title if prod else "Deleted Product"
+            })
+            
+        hydrated.append({
+            "id": order.id,
+            "total": order.total,
+            "status": order.status,
+            "shipping_address": order.shipping_address,
+            "created_at": order.created_at,
+            "items": items_hydrated
+        })
+    return hydrated
+
+@app.get("/api/admin/unverified-artisans")
+def get_unverified_artisans(session: Session = Depends(get_session)):
+    statement = select(models.Artisan).where(models.Artisan.is_verified == False)
+    artisans = session.exec(statement).all()
+    hydrated = []
+    for art in artisans:
+        user = session.get(models.User, art.user_id)
+        hydrated.append({
+            "id": art.id,
+            "name": user.name if user else "Unknown",
+            "bio": art.bio,
+            "craft_type": art.craft_type,
+            "city": art.city,
+            "verification_document": art.verification_document
+        })
+    return hydrated
+
+@app.put("/api/admin/artisans/{artisan_id}/verify")
+def admin_verify_artisan(artisan_id: int, session: Session = Depends(get_session)):
+    artisan = session.get(models.Artisan, artisan_id)
+    if not artisan:
+        raise HTTPException(status_code=404, detail="Artisan not found")
+    artisan.is_verified = True
+    session.add(artisan)
+    session.commit()
+    session.refresh(artisan)
+    return {"message": "Artisan verified successfully", "is_verified": artisan.is_verified}
 
 

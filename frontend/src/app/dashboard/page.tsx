@@ -3,8 +3,24 @@
 import React, { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Settings, Plus, LayoutDashboard, FileText, CheckCircle2, AlertCircle, ShoppingBag } from "lucide-react";
-import Link from "next/link";
+import { 
+  Settings, 
+  Plus, 
+  LayoutDashboard, 
+  FileText, 
+  CheckCircle2, 
+  AlertCircle, 
+  ShoppingBag, 
+  Sparkles, 
+  Upload, 
+  ShieldAlert, 
+  ShieldCheck, 
+  Terminal, 
+  Megaphone, 
+  Copy, 
+  Check,
+  RefreshCw
+} from "lucide-react";
 import { API_URL } from "@/config";
 
 interface Product {
@@ -16,45 +32,277 @@ interface Product {
   images: string[];
   artisan_name: string;
   category_name: string;
+  quality_rating?: number;
+  price_fairness?: string;
+}
+
+interface Order {
+  id: number;
+  total: number;
+  status: string;
+  shipping_address: string;
+  created_at: string;
+  items: Array<{
+    id: number;
+    qty: number;
+    customizations: any;
+    price_at_purchase: number;
+    product_title: string;
+  }>;
 }
 
 export default function ArtisanDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+
+  // Artisan Verification State
+  const [artisanVerified, setArtisanVerified] = useState(false);
+  const [verifyingDoc, setVerifyingDoc] = useState(false);
+  const [verifFeedback, setVerifFeedback] = useState<any>(null);
 
   // Form State
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [basePrice, setBasePrice] = useState(1200);
-  const [category, setCategory] = useState(1); // 1 = Woodwork, 2 = Pottery, 3 = Textiles
+  const [category, setCategory] = useState(2); // 2 = Khurja Pottery
   const [isCustomizable, setIsCustomizable] = useState(true);
-  
+  const [productImages, setProductImages] = useState<string[]>([
+    "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80"
+  ]);
+
+  // AI Suggestion State
+  const [aiSuggesting, setAiSuggesting] = useState(false);
+  const [suggestInputText, setSuggestInputText] = useState("");
+  const [suggestPriceInput, setSuggestPriceInput] = useState(1200);
+  const [suggestFile, setSuggestFile] = useState<File | null>(null);
+  const [qualityMatchReport, setQualityMatchReport] = useState<any>(null);
+
+  // Sandbox Code Generator State
+  const [formulaInstructions, setFormulaInstructions] = useState("");
+  const [testingSandbox, setTestingSandbox] = useState(false);
+  const [sandboxResult, setSandboxResult] = useState<any>(null);
+  const [compiledPricingFormula, setCompiledPricingFormula] = useState("");
+
   // Customization Options Builder State
   const [optName, setOptName] = useState("Glaze Accent");
   const [optType, setOptType] = useState("color_swatch"); // select, color_swatch, text
-  
+
+  // Marketing Assistant Widget State
+  const [marketingProduct, setMarketingProduct] = useState<Product | null>(null);
+  const [generatingMarketing, setGeneratingMarketing] = useState(false);
+  const [marketingKit, setMarketingKit] = useState<any>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
   // Feedback states
   const [submitStatus, setSubmitStatus] = useState<"none" | "success" | "error">("none");
 
-  const loadProducts = async () => {
+  const loadData = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/products?artisan_id=1`); // Mock artisan Riya
+      // Load products
+      const res = await fetch(`${API_URL}/api/products?artisan_id=1`); // Riya
       if (res.ok) {
         const data = await res.json();
         setProducts(data);
-      } else {
-        setProducts([]);
+      }
+      
+      // Load artisan verification status
+      const artRes = await fetch(`${API_URL}/api/artisans/1`);
+      if (artRes.ok) {
+        const artData = await artRes.json();
+        setArtisanVerified(artData.is_verified);
       }
     } catch (err) {
-      console.error("Dashboard error loading products from backend:", err);
+      console.error("Dashboard products loading error:", err);
     } finally {
       setLoading(false);
     }
   };
 
+  const loadOrders = async () => {
+    try {
+      // Fetch orders for customer / users to display for this artisan's items
+      // Since it's local development, we load all orders from backend
+      const res = await fetch(`${API_URL}/api/admin/orders`);
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(data);
+      }
+    } catch (err) {
+      console.error("Dashboard orders loading error:", err);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadProducts();
+    loadData();
+    loadOrders();
   }, []);
+
+  // Handle Document Verification Upload
+  const handleVerifyUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setVerifyingDoc(true);
+    setVerifFeedback(null);
+    const formData = new FormData();
+    formData.append("artisan_id", "1");
+    formData.append("document", file);
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai/verify-seller`, {
+        method: "POST",
+        body: formData
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        setVerifFeedback(result);
+        if (result.is_verified) {
+          setArtisanVerified(true);
+        }
+      }
+    } catch (err) {
+      console.error("Verification upload error:", err);
+    } finally {
+      setVerifyingDoc(false);
+    }
+  };
+
+  // Trigger AI product metadata suggestion and quality price validation
+  const handleAiSuggest = async () => {
+    if (!suggestFile) {
+      alert("Please upload a product photo first to enable AI visual analysis.");
+      return;
+    }
+
+    setAiSuggesting(true);
+    setQualityMatchReport(null);
+    const formData = new FormData();
+    formData.append("description", suggestInputText || "Terracotta art piece");
+    formData.append("requested_price", String(suggestPriceInput));
+    formData.append("image", suggestFile);
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai/suggest-product`, {
+        method: "POST",
+        body: formData
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        // Populate form
+        setTitle(result.title);
+        setDescription(result.description);
+        setBasePrice(result.suggested_price);
+        setCategory(result.category_id);
+        if (result.temp_image_url) {
+          setProductImages([`${API_URL}${result.temp_image_url}`]);
+        }
+        setQualityMatchReport({
+          quality_rating: result.quality_rating,
+          price_fairness: result.price_fairness,
+          price_fairness_reason: result.price_fairness_reason,
+          customization_options: result.customization_options
+        });
+      }
+    } catch (err) {
+      console.error("AI suggestions failed:", err);
+    } finally {
+      setAiSuggesting(false);
+    }
+  };
+
+  // Trigger self-healing sandbox test of custom pricing formula
+  const handleSandboxCompile = async () => {
+    if (!formulaInstructions.strip && formulaInstructions.length === 0) {
+      alert("Please enter some pricing rules for the AI Sandbox compiler.");
+      return;
+    }
+
+    setTestingSandbox(true);
+    setSandboxResult(null);
+
+    // Mock arguments matching product types
+    const testCustoms = {
+      "Glaze Accent": "Cobalt Blue",
+      "Size": "12 inch"
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai/sandbox/test-formula`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instructions: formulaInstructions,
+          test_customizations: testCustoms,
+          base_price: basePrice
+        })
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        setSandboxResult(result);
+        if (result.success) {
+          setCompiledPricingFormula(result.code);
+        }
+      }
+    } catch (err) {
+      console.error("Sandbox compiler error:", err);
+    } finally {
+      setTestingSandbox(false);
+    }
+  };
+
+  // Generate marketing campaign kits for copy paste
+  const handleGenerateMarketing = async (prod: Product) => {
+    setMarketingProduct(prod);
+    setGeneratingMarketing(true);
+    setMarketingKit(null);
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai/marketing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: prod.id })
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        setMarketingKit(result);
+      }
+    } catch (err) {
+      console.error("Marketing generator error:", err);
+    } finally {
+      setGeneratingMarketing(false);
+    }
+  };
+
+  // Mark order ready for pickup and dispatch notification to admin
+  const handleMarkReadyForPickup = async (orderId: number) => {
+    try {
+      const res = await fetch(`${API_URL}/api/orders/${orderId}/pickup`, {
+        method: "PUT"
+      });
+
+      if (res.ok) {
+        // Refresh orders list
+        loadOrders();
+        alert("Notification successfully sent to Administrator. Delivery pick-up is being routed!");
+      }
+    } catch (err) {
+      console.error("Pickup flag error:", err);
+    }
+  };
+
+  const handleCopyText = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,8 +337,9 @@ export default function ArtisanDashboard() {
       base_price: Number(basePrice),
       is_customizable: isCustomizable,
       stock_qty: 10,
-      images: ["https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80"],
+      images: productImages,
       status: "active",
+      pricing_formula: compiledPricingFormula || null,
       customization_options: isCustomizable ? [
         {
           option_name: optName,
@@ -113,30 +362,19 @@ export default function ArtisanDashboard() {
         setTitle("");
         setDescription("");
         setBasePrice(1200);
+        setCompiledPricingFormula("");
+        setFormulaInstructions("");
+        setSandboxResult(null);
+        setQualityMatchReport(null);
         // Reload listings
-        loadProducts();
+        loadData();
         setTimeout(() => setSubmitStatus("none"), 3000);
       } else {
         setSubmitStatus("error");
       }
     } catch (err) {
       console.error("Dashboard error creating product:", err);
-      // Simulate success for local testing/dev demo
-      setSubmitStatus("success");
-      const localMock: Product = {
-        id: Date.now(),
-        title,
-        base_price: Number(basePrice),
-        is_customizable: isCustomizable,
-        stock_qty: 10,
-        images: ["https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80"],
-        artisan_name: "Riya Crafts",
-        category_name: category === 1 ? "Bamboo & Woodwork" : category === 2 ? "Khurja Pottery" : "Heritage Textiles"
-      };
-      setProducts((prev) => [localMock, ...prev]);
-      setTitle("");
-      setDescription("");
-      setTimeout(() => setSubmitStatus("none"), 3000);
+      setSubmitStatus("error");
     }
   };
 
@@ -145,15 +383,69 @@ export default function ArtisanDashboard() {
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-grow text-left">
+        
+        {/* Verification Status Banner */}
+        <div className="mb-8">
+          {artisanVerified ? (
+            <div className="bg-emerald-50/80 backdrop-blur border border-emerald-500/20 text-emerald-900 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="bg-emerald-500 text-white rounded-full p-2">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs uppercase font-archivo font-black tracking-wider text-emerald-800">Verified Artisan Partner</h4>
+                  <p className="text-[10px] text-emerald-900/60 font-medium mt-0.5">Your credentials are validated. You have unlocked live product uploads and AI pricing sandboxes.</p>
+                </div>
+              </div>
+              <span className="text-[9px] uppercase font-archivo font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full shrink-0">Status: Active</span>
+            </div>
+          ) : (
+            <div className="bg-amber-50/90 border border-amber-500/20 text-amber-900 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="bg-amber-500 text-white rounded-full p-2 shrink-0">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs uppercase font-archivo font-black tracking-wider text-amber-800">Identity Verification Required</h4>
+                  <p className="text-[10px] text-amber-900/70 font-medium leading-relaxed">
+                    To start listing and processing custom order requests, we must verify your artisan status. Upload your Craft Guild ID, Aadhaar or Business Registration certificate.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-4 bg-white/40 border border-amber-900/10 rounded-xl p-3.5">
+                <label className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white text-xs font-archivo font-bold uppercase py-2 px-4 rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1.5 shrink-0">
+                  <Upload className="w-4 h-4" />
+                  {verifyingDoc ? "AI Verifying..." : "Upload Identity File"}
+                  <input type="file" accept="image/*,.pdf" onChange={handleVerifyUpload} className="hidden" disabled={verifyingDoc} />
+                </label>
+                {verifyingDoc && (
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin text-amber-700" />
+                    <span className="text-[10px] font-bold text-amber-700">AI scanning ID details...</span>
+                  </div>
+                )}
+                {verifFeedback && (
+                  <span className="text-[10px] font-semibold text-amber-800">
+                    {verifFeedback.reason}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Title */}
-        <div className="mb-10 border-b border-sandstone-light/20 pb-4">
-          <h1 className="font-archivo text-3xl font-black uppercase tracking-tight text-foreground flex items-center gap-2">
-            <LayoutDashboard className="w-8 h-8 text-sandstone-dark" />
-            Artisan Portal
-          </h1>
-          <p className="text-xs text-foreground/60 mt-1">
-            Manage your listings, configure customizable options, and track weaving/pottery schedules.
-          </p>
+        <div className="mb-10 border-b border-sandstone-light/20 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="font-archivo text-3xl font-black uppercase tracking-tight text-foreground flex items-center gap-2">
+              <LayoutDashboard className="w-8 h-8 text-sandstone-dark" />
+              Artisan Portal
+            </h1>
+            <p className="text-xs text-foreground/60 mt-1">
+              Superpowered with Gemini AI. Build self-healing price logic, get descriptions automatically, and track pickup orders.
+            </p>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -165,14 +457,16 @@ export default function ArtisanDashboard() {
             </p>
           </div>
           <div className="bg-cream-dark/30 border border-sandstone-light/15 rounded-2xl p-5">
-            <p className="text-[10px] uppercase tracking-wider font-bold text-olive-dark">Customizable Creations</p>
-            <p className="font-archivo text-3xl font-black text-sandstone-dark mt-1 font-sans">
-              {loading ? "..." : products.filter((p) => p.is_customizable).length}
+            <p className="text-[10px] uppercase tracking-wider font-bold text-olive-dark">Pending Admin Pickups</p>
+            <p className="font-archivo text-3xl font-black text-coral-accent mt-1">
+              {orders.filter(o => o.status === "ready_for_pickup").length}
             </p>
           </div>
           <div className="bg-cream-dark/30 border border-sandstone-light/15 rounded-2xl p-5">
-            <p className="text-[10px] uppercase tracking-wider font-bold text-olive-dark">Pending Weaves</p>
-            <p className="font-archivo text-3xl font-black text-coral-accent mt-1">1</p>
+            <p className="text-[10px] uppercase tracking-wider font-bold text-olive-dark">Completed Deliveries</p>
+            <p className="font-archivo text-3xl font-black text-emerald-700 mt-1 font-sans">
+              {orders.filter(o => o.status === "delivered").length}
+            </p>
           </div>
         </div>
 
@@ -184,6 +478,92 @@ export default function ArtisanDashboard() {
               <Plus className="w-5 h-5 text-coral-accent" />
               List New Creation
             </h3>
+
+            {/* AI Product Suggestions Panel */}
+            <div className="bg-white/40 border border-sandstone-light/20 rounded-2xl p-4.5 space-y-4">
+              <h4 className="text-[10px] uppercase font-archivo font-extrabold tracking-widest text-sandstone-dark flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-coral-accent" />
+                AI Listing Enhancer
+              </h4>
+              
+              <p className="text-[9px] text-foreground/50 leading-relaxed">
+                Upload your product photo, enter key terms, and let Gemini compile descriptions, quality ratings, and fair pricing verification.
+              </p>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Product Photo</label>
+                    <label className="w-full bg-cream-light border border-dashed border-sandstone-light/40 rounded-xl py-2 px-3 text-[10px] font-semibold text-foreground flex items-center justify-center gap-1.5 cursor-pointer hover:border-sandstone-dark transition-all">
+                      <Upload className="w-3.5 h-3.5 text-sandstone-dark" />
+                      {suggestFile ? "Photo Selected" : "Upload File"}
+                      <input type="file" accept="image/*" onChange={(e) => setSuggestFile(e.target.files?.[0] || null)} className="hidden" />
+                    </label>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Listing Price (₹)</label>
+                    <input 
+                      type="number" 
+                      value={suggestPriceInput} 
+                      onChange={(e) => setSuggestPriceInput(Number(e.target.value))} 
+                      className="w-full bg-cream-light border border-sandstone-light/35 rounded-xl py-1.5 px-3 text-[10px] font-semibold focus:outline-none focus:border-sandstone-dark"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Simple Tags / Description</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. blue glazed terracotta vase, 12 inches"
+                    value={suggestInputText} 
+                    onChange={(e) => setSuggestInputText(e.target.value)} 
+                    className="w-full bg-cream-light border border-sandstone-light/35 rounded-xl py-1.5 px-3 text-[10px] font-semibold focus:outline-none focus:border-sandstone-dark"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAiSuggest}
+                  disabled={aiSuggesting}
+                  className="w-full bg-coral-accent/15 hover:bg-coral-accent text-coral-accent hover:text-white text-[10px] font-archivo font-extrabold uppercase py-2.5 rounded-xl transition-all flex items-center justify-center gap-1"
+                >
+                  {aiSuggesting ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 animate-spin" /> Analyzing quality & price...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3" /> Auto-Suggest Details & Verify Price
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Quality Match Report display */}
+              {qualityMatchReport && (
+                <div className="bg-white/95 rounded-xl border border-sandstone-light/10 p-3 space-y-2 mt-3 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-sandstone-light/10 pb-1.5">
+                    <span className="text-[9px] uppercase font-bold text-sandstone-dark">Quality Score:</span>
+                    <span className="text-[10px] font-black text-coral-accent">{qualityMatchReport.quality_rating} / 5.0</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between border-b border-sandstone-light/10 pb-1.5">
+                    <span className="text-[9px] uppercase font-bold text-sandstone-dark">Pricing Check:</span>
+                    <span className={`text-[10px] uppercase font-archivo font-black px-2 py-0.5 rounded-full ${
+                      qualityMatchReport.price_fairness === "Fair" ? "bg-emerald-50 text-emerald-700" :
+                      qualityMatchReport.price_fairness === "Overpriced" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"
+                    }`}>
+                      {qualityMatchReport.price_fairness}
+                    </span>
+                  </div>
+
+                  <p className="text-[9px] font-medium text-foreground/70 leading-relaxed italic">
+                    💡 {qualityMatchReport.price_fairness_reason}
+                  </p>
+                </div>
+              )}
+            </div>
 
             {submitStatus === "success" && (
               <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-3.5 text-xs flex items-center gap-2">
@@ -269,12 +649,12 @@ export default function ArtisanDashboard() {
               </div>
 
               {isCustomizable && (
-                <div className="bg-cream-light border border-sandstone-light/20 rounded-2xl p-4 space-y-3.5">
+                <div className="bg-cream-light border border-sandstone-light/20 rounded-2xl p-4 space-y-4">
                   <h4 className="text-[10px] uppercase font-archivo font-extrabold tracking-widest text-coral-accent">
                     Custom Option Config
                   </h4>
                   
-                  <div className="grid grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-2 gap-3.5 border-b border-sandstone-light/10 pb-3.5">
                     <div className="space-y-1">
                       <label className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Option Label</label>
                       <input
@@ -299,9 +679,82 @@ export default function ArtisanDashboard() {
                     </div>
                   </div>
 
-                  <p className="text-[9px] text-foreground/50 leading-relaxed">
-                    Options automatically generate custom selectors. Default swatches include Saffron Amber, Cobalt Blue (+₹150), and Forest Olive (+₹100).
-                  </p>
+                  {/* Self Healing Dynamic Pricing Sandbox Section */}
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[9px] font-archivo font-extrabold uppercase tracking-wider text-sandstone-dark flex items-center gap-1">
+                        <Terminal className="w-3.5 h-3.5 text-coral-accent" />
+                        AI Pricing Sandbox (Self-Healing)
+                      </label>
+                    </div>
+
+                    <p className="text-[8px] text-foreground/50 leading-relaxed">
+                      Describe pricing formulas in plain English (e.g., *"If Cobalt Blue option selected, add 150. If size chosen is 12 inches, add 300"*). AI generates, sandbox validates and corrects syntax errors.
+                    </p>
+
+                    <textarea
+                      rows={2}
+                      placeholder="Pricing instructions..."
+                      value={formulaInstructions}
+                      onChange={(e) => setFormulaInstructions(e.target.value)}
+                      className="w-full bg-cream-light border border-sandstone-light/35 focus:border-sandstone-dark rounded-xl p-2.5 text-[10px] focus:outline-none font-medium"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={handleSandboxCompile}
+                      disabled={testingSandbox}
+                      className="w-full bg-sandstone-dark text-white hover:bg-sandstone-light hover:text-foreground text-[10px] font-archivo font-extrabold uppercase py-2 rounded-xl transition-all flex items-center justify-center gap-1"
+                    >
+                      {testingSandbox ? (
+                        <>
+                          <RefreshCw className="w-3 h-3 animate-spin" /> Compiling & Self-Healing in Sandbox...
+                        </>
+                      ) : (
+                        "Validate Pricing Code in Sandbox"
+                      )}
+                    </button>
+
+                    {/* Compiler result stack */}
+                    {sandboxResult && (
+                      <div className="bg-zinc-950 text-zinc-100 rounded-xl p-3 font-mono text-[8px] space-y-2 border border-zinc-800">
+                        <div className="flex justify-between items-center border-b border-zinc-800 pb-1.5">
+                          <span className="text-[7px] uppercase font-bold text-zinc-400">Sandbox Test Run:</span>
+                          <span className={sandboxResult.success ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+                            {sandboxResult.success ? "BUILD PASSED (100% OK)" : "COMPILER ERROR"}
+                          </span>
+                        </div>
+
+                        {sandboxResult.attempts && (
+                          <div className="space-y-1">
+                            <span className="text-[6px] uppercase font-semibold text-zinc-500">Heal Attempts Loop:</span>
+                            <div className="space-y-1">
+                              {sandboxResult.attempts.map((att: any, index: number) => (
+                                <div key={index} className="flex justify-between text-zinc-400">
+                                  <span>Pass {index + 1}: Code Compiled</span>
+                                  <span className={att.error ? "text-rose-400" : "text-emerald-400"}>
+                                    {att.error ? "Failed (Self-Healing...)" : "Success"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-1 pt-1.5 border-t border-zinc-900">
+                          <span className="text-[6px] uppercase font-bold text-zinc-500">Sandboxed Python Formula:</span>
+                          <pre className="overflow-x-auto bg-zinc-900/50 p-2 rounded text-zinc-300 select-all leading-normal whitespace-pre">
+                            {sandboxResult.code}
+                          </pre>
+                        </div>
+
+                        <div className="flex justify-between items-center text-[9px] text-emerald-400 pt-1">
+                          <span>Verified Output Price (Base + Custom additions):</span>
+                          <span className="font-extrabold text-xs">₹{sandboxResult.test_output_price}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -314,67 +767,262 @@ export default function ArtisanDashboard() {
             </form>
           </section>
 
-          {/* Right Column: Listings Directory */}
-          <section className="lg:col-span-7 space-y-6">
-            <h3 className="font-archivo text-base uppercase font-bold tracking-wider text-foreground flex items-center gap-2 border-b border-sandstone-light/20 pb-3">
-              <FileText className="w-5 h-5 text-sandstone-dark" />
-              Listing Directory
-            </h3>
+          {/* Right Column: Listings & Active Orders */}
+          <section className="lg:col-span-7 space-y-8">
+            
+            {/* Active Orders Section */}
+            <div className="space-y-4">
+              <h3 className="font-archivo text-base uppercase font-bold tracking-wider text-foreground flex items-center gap-2 border-b border-sandstone-light/20 pb-3">
+                <ShoppingBag className="w-5 h-5 text-coral-accent" />
+                Fulfillment queue (Orders)
+              </h3>
 
-            {loading ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="animate-pulse bg-cream-dark/20 h-20 rounded-xl" />
-                ))}
-              </div>
-            ) : products.length === 0 ? (
-              <div className="text-center py-16 bg-cream-dark/10 rounded-2xl border border-dashed border-sandstone-light/20 space-y-3">
-                <ShoppingBag className="w-8 h-8 text-sandstone-light mx-auto" />
-                <p className="text-xs text-foreground/60">No active creations listed by you yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {products.map((p) => (
-                  <div
-                    key={p.id}
-                    className="bg-cream-dark/15 border border-sandstone-light/10 p-4 rounded-2xl flex items-center justify-between gap-4"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={p.images[0]}
-                      alt=""
-                      className="w-12 h-12 rounded-lg object-cover bg-cream-dark border border-sandstone-light/10"
-                    />
-                    
-                    <div className="flex-grow text-left">
-                      <h4 className="font-archivo text-xs sm:text-sm uppercase font-bold text-foreground line-clamp-1">
-                        {p.title}
-                      </h4>
-                      <p className="text-[10px] text-foreground/50 font-semibold uppercase mt-0.5">
-                        {p.category_name || "Woodwork"}
-                      </p>
-                    </div>
+              {ordersLoading ? (
+                <div className="animate-pulse bg-cream-dark/20 h-24 rounded-xl" />
+              ) : orders.length === 0 ? (
+                <div className="text-center py-10 bg-cream-dark/10 rounded-2xl border border-dashed border-sandstone-light/20">
+                  <p className="text-xs text-foreground/50">No orders placed on your listings yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {orders.map((ord) => (
+                    <div 
+                      key={ord.id}
+                      className="bg-cream-dark/20 border border-sandstone-light/10 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-4 shadow-sm"
+                    >
+                      <div className="space-y-2 text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-archivo font-extrabold uppercase text-sandstone-dark bg-cream-dark/50 px-2 py-0.5 rounded-md">Order #{ord.id}</span>
+                          <span className={`text-[8px] font-archivo font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                            ord.status === "ready_for_pickup" ? "bg-amber-100 text-amber-800" :
+                            ord.status === "out_for_delivery" ? "bg-blue-100 text-blue-800" :
+                            ord.status === "delivered" ? "bg-emerald-100 text-emerald-800" : "bg-zinc-100 text-zinc-800"
+                          }`}>
+                            {ord.status.replace(/_/g, ' ')}
+                          </span>
+                        </div>
 
-                    <div className="text-right shrink-0">
-                      <p className="font-archivo text-sm font-black text-sandstone-dark">
-                        ₹{p.base_price.toLocaleString("en-IN")}
-                      </p>
-                      
-                      {p.is_customizable ? (
-                        <span className="inline-flex items-center gap-0.5 text-[8px] font-archivo font-extrabold uppercase text-coral-accent bg-coral-accent/10 py-0.5 px-1.5 rounded-full mt-1">
-                          <Settings className="w-2 h-2" /> Customizable
-                        </span>
-                      ) : (
-                        <span className="text-[8px] font-bold text-foreground/45 uppercase mt-1 block">Standard</span>
-                      )}
+                        <div className="space-y-1">
+                          <span className="text-[8px] font-bold text-olive-dark uppercase">Products to pack:</span>
+                          <ul className="text-xs font-semibold text-foreground/80 list-disc list-inside">
+                            {ord.items.map((it, index) => (
+                              <li key={index}>
+                                {it.product_title} (x{it.qty})
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <p className="text-[10px] font-medium text-foreground/60 leading-relaxed">
+                          📍 Delivery Address: <span className="font-bold">{ord.shipping_address}</span>
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col justify-between items-end shrink-0">
+                        <span className="text-sm font-archivo font-black text-sandstone-dark">₹{ord.total.toLocaleString("en-IN")}</span>
+                        
+                        {ord.status === "paid" && (
+                          <button
+                            onClick={() => handleMarkReadyForPickup(ord.id)}
+                            className="bg-coral-accent hover:bg-coral-accent/80 text-white text-[9px] font-archivo font-extrabold uppercase py-2 px-3 rounded-lg transition-all shadow"
+                          >
+                            Mark Ready for Pickup
+                          </button>
+                        )}
+                        {ord.status === "ready_for_pickup" && (
+                          <span className="text-[8px] font-bold text-amber-700 bg-amber-50 border border-amber-200/50 p-1.5 rounded-md text-center max-w-[130px] leading-tight">
+                            Pickup requested. Admin courier dispatched.
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Listing Directory Section */}
+            <div className="space-y-4">
+              <h3 className="font-archivo text-base uppercase font-bold tracking-wider text-foreground flex items-center gap-2 border-b border-sandstone-light/20 pb-3">
+                <FileText className="w-5 h-5 text-sandstone-dark" />
+                Creations Directory
+              </h3>
+
+              {loading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse bg-cream-dark/20 h-20 rounded-xl" />
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="text-center py-16 bg-cream-dark/10 rounded-2xl border border-dashed border-sandstone-light/20 space-y-3">
+                  <ShoppingBag className="w-8 h-8 text-sandstone-light mx-auto" />
+                  <p className="text-xs text-foreground/60">No active creations listed by you yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  {products.map((p) => (
+                    <div
+                      key={p.id}
+                      className="bg-cream-dark/15 border border-sandstone-light/10 p-4.5 rounded-2xl flex flex-col justify-between gap-4"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={p.images[0]}
+                          alt=""
+                          className="w-12 h-12 rounded-lg object-cover bg-cream-dark border border-sandstone-light/10 shrink-0"
+                        />
+                        
+                        <div className="flex-grow text-left">
+                          <h4 className="font-archivo text-xs sm:text-sm uppercase font-bold text-foreground line-clamp-1">
+                            {p.title}
+                          </h4>
+                          <p className="text-[10px] text-foreground/50 font-semibold uppercase mt-0.5">
+                            {p.category_name || "Woodwork"}
+                          </p>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <p className="font-archivo text-sm font-black text-sandstone-dark">
+                            ₹{p.base_price.toLocaleString("en-IN")}
+                          </p>
+                          
+                          {p.is_customizable ? (
+                            <span className="inline-flex items-center gap-0.5 text-[8px] font-archivo font-extrabold uppercase text-coral-accent bg-coral-accent/10 py-0.5 px-1.5 rounded-full mt-1">
+                              <Settings className="w-2 h-2" /> Customizable
+                            </span>
+                          ) : (
+                            <span className="text-[8px] font-bold text-foreground/45 uppercase mt-1 block">Standard</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Marketing Panel Toggle */}
+                      <div className="border-t border-sandstone-light/10 pt-3 flex items-center justify-between">
+                        <span className="text-[9px] text-foreground/40 font-medium">Auto-generated tags verified</span>
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateMarketing(p)}
+                          className="bg-sandstone-dark/10 hover:bg-coral-accent text-sandstone-dark hover:text-white text-[9px] font-archivo font-extrabold uppercase py-1.5 px-3 rounded-lg transition-all flex items-center gap-1"
+                        >
+                          <Megaphone className="w-3.5 h-3.5" /> AI Marketing Kit
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
 
         </div>
+
+        {/* Marketing Campaign Kit Modal */}
+        {marketingProduct && (
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-cream-light border border-sandstone-light/20 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 space-y-6 shadow-2xl text-left">
+              <div className="flex justify-between items-center border-b border-sandstone-light/20 pb-4">
+                <div className="space-y-0.5">
+                  <h3 className="font-archivo text-base uppercase font-black text-foreground flex items-center gap-1.5">
+                    <Megaphone className="w-5 h-5 text-coral-accent" />
+                    AI Marketing Kit
+                  </h3>
+                  <p className="text-[10px] text-foreground/50">Campaign materials for "{marketingProduct.title}"</p>
+                </div>
+                <button 
+                  onClick={() => { setMarketingProduct(null); setMarketingKit(null); }}
+                  className="bg-cream-dark/50 hover:bg-cream-dark p-1.5 rounded-full text-foreground/60 transition-all text-xs font-bold font-mono px-3"
+                >
+                  Close
+                </button>
+              </div>
+
+              {generatingMarketing ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <RefreshCw className="w-8 h-8 animate-spin text-coral-accent" />
+                  <p className="text-xs font-bold text-sandstone-dark">Gemini AI copywriting social copy & newsletter templates...</p>
+                </div>
+              ) : marketingKit ? (
+                <div className="space-y-5">
+                  {/* Instagram copy */}
+                  <div className="space-y-1.5 bg-white/50 border border-sandstone-light/10 rounded-2xl p-4">
+                    <div className="flex justify-between items-center border-b border-sandstone-light/10 pb-1.5 mb-2">
+                      <span className="text-[10px] font-archivo font-extrabold uppercase text-coral-accent">Instagram Post Caption</span>
+                      <button 
+                        onClick={() => handleCopyText(marketingKit.instagram_post, 'insta')}
+                        className="text-[9px] font-archivo font-bold text-sandstone-dark hover:text-coral-accent flex items-center gap-0.5"
+                      >
+                        {copiedKey === 'insta' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedKey === 'insta' ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <p className="text-xs font-medium text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                      {marketingKit.instagram_post}
+                    </p>
+                  </div>
+
+                  {/* Facebook copy */}
+                  <div className="space-y-1.5 bg-white/50 border border-sandstone-light/10 rounded-2xl p-4">
+                    <div className="flex justify-between items-center border-b border-sandstone-light/10 pb-1.5 mb-2">
+                      <span className="text-[10px] font-archivo font-extrabold uppercase text-coral-accent">Facebook Post Text</span>
+                      <button 
+                        onClick={() => handleCopyText(marketingKit.facebook_post, 'fb')}
+                        className="text-[9px] font-archivo font-bold text-sandstone-dark hover:text-coral-accent flex items-center gap-0.5"
+                      >
+                        {copiedKey === 'fb' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedKey === 'fb' ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <p className="text-xs font-medium text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                      {marketingKit.facebook_post}
+                    </p>
+                  </div>
+
+                  {/* Newsletter */}
+                  <div className="space-y-1.5 bg-white/50 border border-sandstone-light/10 rounded-2xl p-4">
+                    <div className="flex justify-between items-center border-b border-sandstone-light/10 pb-1.5 mb-2">
+                      <span className="text-[10px] font-archivo font-extrabold uppercase text-coral-accent">Email Newsletter Template</span>
+                      <button 
+                        onClick={() => handleCopyText(`Subject: ${marketingKit.newsletter_subject}\n\n${marketingKit.newsletter_body}`, 'email')}
+                        className="text-[9px] font-archivo font-bold text-sandstone-dark hover:text-coral-accent flex items-center gap-0.5"
+                      >
+                        {copiedKey === 'email' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedKey === 'email' ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <div className="space-y-2 text-xs font-medium text-foreground/80 leading-relaxed">
+                      <p><span className="font-bold text-sandstone-dark">Subject:</span> {marketingKit.newsletter_subject}</p>
+                      <pre className="whitespace-pre-wrap font-sans mt-2 bg-cream-dark/10 p-3 rounded-lg leading-relaxed">
+                        {marketingKit.newsletter_body}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {/* Search Ad copy */}
+                  <div className="space-y-1.5 bg-white/50 border border-sandstone-light/10 rounded-2xl p-4">
+                    <div className="flex justify-between items-center border-b border-sandstone-light/10 pb-1.5 mb-2">
+                      <span className="text-[10px] font-archivo font-extrabold uppercase text-coral-accent">Google Search Ad Text</span>
+                      <button 
+                        onClick={() => handleCopyText(marketingKit.search_ad_copy, 'ad')}
+                        className="text-[9px] font-archivo font-bold text-sandstone-dark hover:text-coral-accent flex items-center gap-0.5"
+                      >
+                        {copiedKey === 'ad' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedKey === 'ad' ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <p className="text-xs font-medium font-mono text-foreground/80">
+                      {marketingKit.search_ad_copy}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-10 text-xs text-foreground/50">Error generating marketing campaign.</div>
+              )}
+            </div>
+          </div>
+        )}
+
       </main>
 
       <Footer />
