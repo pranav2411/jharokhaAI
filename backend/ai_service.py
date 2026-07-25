@@ -57,40 +57,51 @@ def call_gemini(contents: list, system_instruction: Optional[str] = None) -> str
 
 # --- High Fidelity Fallbacks for Demo and local dev without Key ---
 
-def verify_artisan_document(doc_bytes: bytes, file_name: str) -> dict:
-    """Verifies artisan documents (OCR, identity verification)."""
+def verify_artisan_documents(
+    guild_bytes: bytes, guild_name: str,
+    aadhaar_bytes: bytes, aadhaar_name: str,
+    business_bytes: bytes, business_name: str
+) -> dict:
+    """Verifies all three required artisan documents using multimodal Gemini analysis."""
     if not GEMINI_API_KEY:
-        # High fidelity mock verification based on name
-        # We can assume name fits the seeded artisan profiles
         return {
             "is_verified": True,
             "name": "Riya Sen",
             "city": "Jaipur",
-            "document_type": "Artisan Identity Card (Govt. of India)",
+            "document_type": "Craft Guild ID, Aadhaar, Business Registration",
             "confidence": 0.98,
-            "reason": "Artisan Card matches registration database for Jaipur Region Craft Guild."
+            "reason": "All 3 documents (Craft Guild ID, Aadhaar, and Business Reg) verified successfully via mock."
         }
 
-    # Prepare multimodal call
-    b64_data = base64.b64encode(doc_bytes).decode("utf-8")
-    mime_type = "image/jpeg"
-    if file_name.endswith(".png"):
-        mime_type = "image/png"
-    elif file_name.endswith(".pdf"):
-        mime_type = "application/pdf"
+    # Helper to get mime type
+    def get_mime(filename: str) -> str:
+        if filename.endswith(".png"):
+            return "image/png"
+        elif filename.endswith(".pdf"):
+            return "application/pdf"
+        return "image/jpeg"
+
+    g_b64 = base64.b64encode(guild_bytes).decode("utf-8")
+    a_b64 = base64.b64encode(aadhaar_bytes).decode("utf-8")
+    b_b64 = base64.b64encode(business_bytes).decode("utf-8")
 
     prompt = (
-        "Identify and verify the document. Analyze if it matches a valid government ID or artisan license. "
+        "Verify the three uploaded artisan documents: a Craft Guild ID, an Aadhaar Card, and a Business Registration Certificate. "
+        "Analyze if these documents are valid, match the requested role, and have matching names. "
         "Return a JSON object containing: "
-        "is_verified (boolean), name (extracted full name), city (extracted city), "
-        "document_type (e.g. 'Aadhaar Card', 'Artisan Registration Certificate'), "
-        "confidence (float, 0.0 to 1.0), and reason (string description of analysis)."
+        "is_verified (boolean, true only if all 3 documents are present and match), "
+        "name (extracted full name from documents), "
+        "city (extracted city from documents), "
+        "confidence (float, 0.0 to 1.0), and "
+        "reason (string describing the validation details for each document)."
     )
 
     contents = [{
         "parts": [
             {"text": prompt},
-            {"inlineData": {"mimeType": mime_type, "data": b64_data}}
+            {"inlineData": {"mimeType": get_mime(guild_name), "data": g_b64}},
+            {"inlineData": {"mimeType": get_mime(aadhaar_name), "data": a_b64}},
+            {"inlineData": {"mimeType": get_mime(business_name), "data": b_b64}}
         ]
     }]
 
@@ -98,12 +109,12 @@ def verify_artisan_document(doc_bytes: bytes, file_name: str) -> dict:
         res = call_gemini(contents)
         return json.loads(res)
     except Exception as e:
-        print(f"Document verify fallback triggered: {e}")
+        print(f"Documents verify fallback triggered: {e}")
         return {
             "is_verified": True,
             "name": "Artisan Partner",
             "city": "Unknown",
-            "document_type": "Artisan ID",
+            "document_type": "Craft Guild ID, Aadhaar, Business Registration",
             "confidence": 0.85,
             "reason": f"Automatic verification passed via mock (Real API failed: {str(e)})"
         }

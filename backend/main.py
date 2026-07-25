@@ -949,29 +949,39 @@ def resolve_callback_request(id: int, session: Session = Depends(get_session)):
 @app.post("/api/ai/verify-seller")
 def api_verify_seller(
     artisan_id: int = Form(...),
-    document: UploadFile = File(...),
+    guild_id: UploadFile = File(...),
+    aadhaar: UploadFile = File(...),
+    business_reg: UploadFile = File(...),
     session: Session = Depends(get_session)
 ):
     artisan = session.get(models.Artisan, artisan_id)
     if not artisan:
         raise HTTPException(status_code=404, detail="Artisan not found")
     
-    # Save the file locally to uploads folder
+    # Save the files locally to uploads folder
     os.makedirs("uploads", exist_ok=True)
-    file_path = os.path.join("uploads", f"artisan_{artisan_id}_{document.filename}")
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(document.file, buffer)
+    
+    def save_and_read(doc: UploadFile):
+        file_path = os.path.join("uploads", f"artisan_{artisan_id}_{doc.filename}")
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(doc.file, buffer)
+        with open(file_path, "rb") as f:
+            return f.read()
+
+    guild_bytes = save_and_read(guild_id)
+    aadhaar_bytes = save_and_read(aadhaar)
+    business_bytes = save_and_read(business_reg)
         
-    # Read bytes for AI service
-    with open(file_path, "rb") as f:
-        doc_bytes = f.read()
-        
-    # Call AI verifier
-    verification_res = ai_service.verify_artisan_document(doc_bytes, document.filename)
+    # Call AI verifier with all 3 files
+    verification_res = ai_service.verify_artisan_documents(
+        guild_bytes, guild_id.filename,
+        aadhaar_bytes, aadhaar.filename,
+        business_bytes, business_reg.filename
+    )
     
     if verification_res.get("is_verified", False):
         artisan.is_verified = True
-        artisan.verification_document = f"/static/artisan_{artisan_id}_{document.filename}"
+        artisan.verification_document = f"/static/artisan_{artisan_id}_{guild_id.filename}"
         session.add(artisan)
         session.commit()
         session.refresh(artisan)

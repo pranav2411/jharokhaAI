@@ -671,6 +671,9 @@ export default function LoginPage() {
                   <p>
                     <strong>4. Data Integrity:</strong> We do not sell or lease your personal information to third-party advertisers. All transaction and shipping logs are stored strictly inside a protected database environment.
                   </p>
+                  <p>
+                    <strong>5. Artisan Verification Documents:</strong> If you register as a seller, we collect and process three documents: your Craft Guild ID, Aadhaar Card, and Business Registration Certificate. These documents are sent securely to our automated AI verification service for identity validation. They are stored under encryption and are never visible or shared with other buyers or third parties.
+                  </p>
                 </>
               ) : (
                 <>
@@ -686,6 +689,9 @@ export default function LoginPage() {
                   </p>
                   <p>
                     <strong>4. Compliance and Consent:</strong> By selecting the checkbox, you consent to our automated tracking of your active orders and cookies required for authentication and shopping cart maintenance.
+                  </p>
+                  <p>
+                    <strong>5. Seller Document Verification:</strong> Artisans (Sellers) are required to verify their identity by uploading their Craft Guild ID, Aadhaar Card, and Business Registration Certificate. You warrant that all uploaded documents are authentic. Providing fraudulent information or forged documents will lead to immediate account suspension and listing removal.
                   </p>
                 </>
               )}

@@ -61,6 +61,9 @@ export default function ArtisanDashboard() {
   const [artisanVerified, setArtisanVerified] = useState(false);
   const [verifyingDoc, setVerifyingDoc] = useState(false);
   const [verifFeedback, setVerifFeedback] = useState<any>(null);
+  const [guildFile, setGuildFile] = useState<File | null>(null);
+  const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
+  const [businessFile, setBusinessFile] = useState<File | null>(null);
 
   // Form State
   const [title, setTitle] = useState("");
@@ -141,16 +144,21 @@ export default function ArtisanDashboard() {
     loadOrders();
   }, []);
 
-  // Handle Document Verification Upload
-  const handleVerifyUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Handle Document Verification Upload (Requires 3 files)
+  const handleVerifyUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guildFile || !aadhaarFile || !businessFile) {
+      alert("Please select all three required documents.");
+      return;
+    }
 
     setVerifyingDoc(true);
     setVerifFeedback(null);
     const formData = new FormData();
     formData.append("artisan_id", "1");
-    formData.append("document", file);
+    formData.append("guild_id", guildFile);
+    formData.append("aadhaar", aadhaarFile);
+    formData.append("business_reg", businessFile);
 
     try {
       const res = await fetch(`${API_URL}/api/ai/verify-seller`, {
@@ -164,9 +172,19 @@ export default function ArtisanDashboard() {
         if (result.is_verified) {
           setArtisanVerified(true);
         }
+      } else {
+        const err = await res.json();
+        setVerifFeedback({
+          is_verified: false,
+          reason: err.detail || "Verification failed. Please check files."
+        });
       }
     } catch (err) {
       console.error("Verification upload error:", err);
+      setVerifFeedback({
+        is_verified: false,
+        reason: "Failed to connect to verification server."
+      });
     } finally {
       setVerifyingDoc(false);
     }
@@ -400,7 +418,7 @@ export default function ArtisanDashboard() {
               <span className="text-[9px] uppercase font-archivo font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full shrink-0">Status: Active</span>
             </div>
           ) : (
-            <div className="bg-amber-50/90 border border-amber-500/20 text-amber-900 rounded-2xl p-5 shadow-sm space-y-4">
+            <form onSubmit={handleVerifyUpload} className="bg-amber-50/90 border border-amber-500/20 text-amber-900 rounded-2xl p-5 shadow-sm space-y-4">
               <div className="flex items-start gap-3">
                 <div className="bg-amber-500 text-white rounded-full p-2 shrink-0">
                   <ShieldAlert className="w-5 h-5" />
@@ -408,30 +426,62 @@ export default function ArtisanDashboard() {
                 <div className="space-y-1">
                   <h4 className="text-xs uppercase font-archivo font-black tracking-wider text-amber-800">Identity Verification Required</h4>
                   <p className="text-[10px] text-amber-900/70 font-medium leading-relaxed">
-                    To start listing and processing custom order requests, we must verify your artisan status. Upload your Craft Guild ID, Aadhaar or Business Registration certificate.
+                    To start listing and processing custom order requests, we must verify your artisan status. Upload your Craft Guild ID, Aadhaar and Business Registration certificate.
                   </p>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-4 bg-white/40 border border-amber-900/10 rounded-xl p-3.5">
-                <label className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white text-xs font-archivo font-bold uppercase py-2 px-4 rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1.5 shrink-0">
-                  <Upload className="w-4 h-4" />
-                  {verifyingDoc ? "AI Verifying..." : "Upload Identity File"}
-                  <input type="file" accept="image/*,.pdf" onChange={handleVerifyUpload} className="hidden" disabled={verifyingDoc} />
-                </label>
-                {verifyingDoc && (
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 animate-spin text-amber-700" />
-                    <span className="text-[10px] font-bold text-amber-700">AI scanning ID details...</span>
-                  </div>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 1. Craft Guild ID */}
+                <div className="bg-white/50 border border-sandstone-light/20 p-3 rounded-xl flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] uppercase font-bold text-sandstone-dark mb-2">1. Craft Guild ID</span>
+                  <label className="bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-archivo font-bold uppercase py-1.5 px-3 rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
+                    <Upload className="w-3.5 h-3.5" />
+                    {guildFile ? "Selected ✓" : "Choose File"}
+                    <input type="file" accept="image/*,.pdf" onChange={(e) => setGuildFile(e.target.files?.[0] || null)} className="hidden" disabled={verifyingDoc} />
+                  </label>
+                  {guildFile && <span className="text-[9px] text-amber-900/70 mt-1 truncate max-w-full font-medium">{guildFile.name}</span>}
+                </div>
+
+                {/* 2. Aadhaar Card */}
+                <div className="bg-white/50 border border-sandstone-light/20 p-3 rounded-xl flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] uppercase font-bold text-sandstone-dark mb-2">2. Aadhaar Card</span>
+                  <label className="bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-archivo font-bold uppercase py-1.5 px-3 rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
+                    <Upload className="w-3.5 h-3.5" />
+                    {aadhaarFile ? "Selected ✓" : "Choose File"}
+                    <input type="file" accept="image/*,.pdf" onChange={(e) => setAadhaarFile(e.target.files?.[0] || null)} className="hidden" disabled={verifyingDoc} />
+                  </label>
+                  {aadhaarFile && <span className="text-[9px] text-amber-900/70 mt-1 truncate max-w-full font-medium">{aadhaarFile.name}</span>}
+                </div>
+
+                {/* 3. Business Registration */}
+                <div className="bg-white/50 border border-sandstone-light/20 p-3 rounded-xl flex flex-col items-center justify-center text-center">
+                  <span className="text-[10px] uppercase font-bold text-sandstone-dark mb-2">3. Business Reg.</span>
+                  <label className="bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-archivo font-bold uppercase py-1.5 px-3 rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1">
+                    <Upload className="w-3.5 h-3.5" />
+                    {businessFile ? "Selected ✓" : "Choose File"}
+                    <input type="file" accept="image/*,.pdf" onChange={(e) => setBusinessFile(e.target.files?.[0] || null)} className="hidden" disabled={verifyingDoc} />
+                  </label>
+                  {businessFile && <span className="text-[9px] text-amber-900/70 mt-1 truncate max-w-full font-medium">{businessFile.name}</span>}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/40 border border-amber-900/10 rounded-xl p-3.5">
+                <button
+                  type="submit"
+                  disabled={verifyingDoc || !guildFile || !aadhaarFile || !businessFile}
+                  className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 disabled:bg-amber-500/40 text-white text-xs font-archivo font-bold uppercase py-2 px-5 rounded-lg transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <RefreshCw className={`w-4 h-4 ${verifyingDoc ? "animate-spin" : ""}`} />
+                  {verifyingDoc ? "AI Verifying..." : "Verify All Documents"}
+                </button>
                 {verifFeedback && (
-                  <span className="text-[10px] font-semibold text-amber-800">
+                  <span className={`text-[10px] font-semibold text-amber-850`}>
                     {verifFeedback.reason}
                   </span>
                 )}
               </div>
-            </div>
+            </form>
           )}
         </div>
 
