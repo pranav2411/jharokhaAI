@@ -1,5 +1,6 @@
 from typing import List, Optional, Dict, Any
 import os
+import re
 import shutil
 from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, File, Request, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -721,12 +722,15 @@ def upload_image(request: Request, file: UploadFile = File(...)):
     active_dir = "/data/uploads" if os.path.exists("/data") else "uploads"
     os.makedirs(active_dir, exist_ok=True)
     
-    file_path = os.path.join(active_dir, file.filename)
+    # Sanitize the filename to replace spaces with underscores and remove special characters
+    clean_filename = re.sub(r'[^a-zA-Z0-9_\.-]', '', file.filename.replace(' ', '_'))
+    file_path = os.path.join(active_dir, clean_filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
     base_url = str(request.base_url).rstrip("/")
-    return {"url": f"{base_url}/static/{file.filename}"}
+    return {"url": f"{base_url}/static/{clean_filename}"}
+
 
 
 @app.put("/api/admin/products/{product_id}")
@@ -1030,11 +1034,12 @@ def api_verify_seller(
     if not artisan:
         raise HTTPException(status_code=404, detail="Artisan not found")
     
-    # Save the files locally to uploads folder
-    os.makedirs("uploads", exist_ok=True)
+    active_dir = "/data/uploads" if os.path.exists("/data") else "uploads"
+    os.makedirs(active_dir, exist_ok=True)
     
     def save_and_read(doc: UploadFile):
-        file_path = os.path.join("uploads", f"artisan_{artisan_id}_{doc.filename}")
+        clean_filename = re.sub(r'[^a-zA-Z0-9_\.-]', '', doc.filename.replace(' ', '_'))
+        file_path = os.path.join(active_dir, f"artisan_{artisan_id}_{clean_filename}")
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(doc.file, buffer)
         with open(file_path, "rb") as f:
@@ -1052,8 +1057,9 @@ def api_verify_seller(
     )
     
     if verification_res.get("is_verified", False):
+        clean_guild = re.sub(r'[^a-zA-Z0-9_\.-]', '', guild_id.filename.replace(' ', '_'))
         artisan.is_verified = True
-        artisan.verification_document = f"/static/artisan_{artisan_id}_{guild_id.filename}"
+        artisan.verification_document = f"/static/artisan_{artisan_id}_{clean_guild}"
         session.add(artisan)
         session.commit()
         session.refresh(artisan)
@@ -1067,9 +1073,11 @@ def api_suggest_product(
     image: UploadFile = File(...),
     session: Session = Depends(get_session)
 ):
-    # Save image file locally
-    os.makedirs("uploads", exist_ok=True)
-    file_path = os.path.join("uploads", f"temp_{image.filename}")
+    active_dir = "/data/uploads" if os.path.exists("/data") else "uploads"
+    os.makedirs(active_dir, exist_ok=True)
+    
+    clean_filename = re.sub(r'[^a-zA-Z0-9_\.-]', '', image.filename.replace(' ', '_'))
+    file_path = os.path.join(active_dir, f"temp_{clean_filename}")
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
         
@@ -1080,7 +1088,7 @@ def api_suggest_product(
     ai_suggestions = ai_service.suggest_and_verify_product(img_bytes, description, requested_price)
     
     # Keep the path of the uploaded file for return
-    ai_suggestions["temp_image_url"] = f"/static/temp_{image.filename}"
+    ai_suggestions["temp_image_url"] = f"/static/temp_{clean_filename}"
     return ai_suggestions
 
 class MarketingRequestPayload(BaseModel):
