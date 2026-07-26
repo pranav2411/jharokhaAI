@@ -266,14 +266,16 @@ def generate_pricing_formula(instructions: str) -> str:
 
 def generate_marketing_campaign(title: str, description: str, base_price: float) -> dict:
     """Generates copywriting for marketing items."""
+    fallback_data = {
+        "instagram_post": f"✨ Elevate your home decor with the authentic, handcrafted '{title}'. Painstakingly created by our master artisan partners, it brings timeless tradition to life. Starting at ₹{base_price}. Shop local, empower heritage artisans. Link in bio! 🏺🌾 #Handcrafted #TraditionalArt #ShopLocal #Jharokha",
+        "facebook_post": f"We are proud to feature the '{title}' on Jharokha. Every single item represents hours of patience, premium clay, and generations of expertise. Bring a piece of Jaipur/Khurja heritage into your living space today.\n📦 Free home delivery on orders above ₹2000.\n🛍️ Customize yours now at: https://jharokha.in/product/1",
+        "newsletter_subject": f"Introduce Authentic Heritage Craftistry to Your Home: {title}",
+        "newsletter_body": f"Hello Craft Lover,\n\nAt Jharokha, we believe every handloom and carved block has a story to tell. Meet the '{title}' - our latest addition crafted entirely by hand.\n\nDescription: {description}\n\nBy choosing this item, you directly support local artisan families, keeping age-old pottery and woodwork guilds alive.\n\nWarmly,\nTeam Jharokha",
+        "search_ad_copy": f"Handcrafted {title} | Buy Authentic Heritage Art | Custom Sizes & Colors available. Support local Indian artisans."
+    }
+
     if not GEMINI_API_KEY:
-        return {
-            "instagram_post": f"✨ Elevate your home decor with the authentic, handcrafted '{title}'. Painstakingly created by our master artisan partners, it brings timeless tradition to life. Starting at ₹{base_price}. Shop local, empower heritage artisans. Link in bio! 🏺🌾 #Handcrafted #TraditionalArt #ShopLocal #Jharokha",
-            "facebook_post": f"We are proud to feature the '{title}' on Jharokha. Every single item represents hours of patience, premium clay, and generations of expertise. Bring a piece of Jaipur/Khurja heritage into your living space today.\n📦 Free home delivery on orders above ₹2000.\n🛍️ Customize yours now at: https://jharokha.in/product/1",
-            "newsletter_subject": f"Introduce Authentic Heritage Craftistry to Your Home: {title}",
-            "newsletter_body": f"Hello Craft Lover,\n\nAt Jharokha, we believe every handloom and carved block has a story to tell. Meet the '{title}' - our latest addition crafted entirely by hand.\n\nDescription: {description}\n\nBy choosing this item, you directly support local artisan families, keeping age-old pottery and woodwork guilds alive.\n\nWarmly,\nTeam Jharokha",
-            "search_ad_copy": f"Handcrafted {title} | Buy Authentic Heritage Art | Custom Sizes & Colors available. Support local Indian artisans."
-        }
+        return fallback_data
 
     prompt = (
         f"Write a marketing copy kit for this artisan product:\n"
@@ -289,10 +291,18 @@ def generate_marketing_campaign(title: str, description: str, base_price: float)
     contents = [{"parts": [{"text": prompt}]}]
     try:
         res = call_gemini(contents)
-        return json.loads(res)
-    except Exception:
-        # Fallback to default
-        return generate_marketing_campaign(title, description, base_price)
+        res_clean = res.strip()
+        if res_clean.startswith("```"):
+            lines = res_clean.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines[-1].startswith("```"):
+                lines = lines[:-1]
+            res_clean = "\n".join(lines).strip()
+        return json.loads(res_clean)
+    except Exception as e:
+        print("Marketing campaign generation failed, using fallback copy:", e)
+        return fallback_data
 
 def chat_with_artisan_assistant(chat_history: list, user_message: str, product_details: dict) -> dict:
     """Answers product and customization inquiries, and detects customization requests."""
