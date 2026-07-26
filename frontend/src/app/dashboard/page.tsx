@@ -108,6 +108,17 @@ export default function ArtisanDashboard() {
   const [customizationOptions, setCustomizationOptions] = useState<any[]>([]);
   const [newOptLabel, setNewOptLabel] = useState("");
   const [newOptType, setNewOptType] = useState("color_swatch"); // select, color_swatch, text
+  
+  // Custom Choices Builder State
+  const [newChoices, setNewChoices] = useState<any[]>([]);
+  const [choiceName, setChoiceName] = useState("");
+  const [choicePrice, setChoicePrice] = useState(0);
+  const [choiceColor, setChoiceColor] = useState("#D98354");
+
+  // Monogram Configuration State
+  const [monogramPlaceholder, setMonogramPlaceholder] = useState("Enter custom monogram initials");
+  const [monogramMaxLen, setMonogramMaxLen] = useState(8);
+  const [monogramPrice, setMonogramPrice] = useState(150);
 
   // Marketing Assistant Widget State
   const [marketingProduct, setMarketingProduct] = useState<Product | null>(null);
@@ -375,6 +386,27 @@ export default function ArtisanDashboard() {
     setQualityMatchReport(null);
   };
 
+  const handleAddChoice = () => {
+    if (!choiceName.trim()) {
+      alert("Please enter a choice name.");
+      return;
+    }
+    const choiceObj: any = {
+      name: choiceName.trim(),
+      price: Number(choicePrice)
+    };
+    if (newOptType === "color_swatch") {
+      choiceObj.color = choiceColor;
+    }
+    setNewChoices(prev => [...prev, choiceObj]);
+    setChoiceName("");
+    setChoicePrice(0);
+  };
+
+  const handleRemoveChoice = (idxToRemove: number) => {
+    setNewChoices(prev => prev.filter((_, idx) => idx !== idxToRemove));
+  };
+
   const handleAddOption = () => {
     if (!newOptLabel.trim()) {
       alert("Please enter an option name.");
@@ -387,22 +419,17 @@ export default function ArtisanDashboard() {
     }
 
     let choices: any = [];
-    if (newOptType === "color_swatch") {
-      choices = [
-        { name: "Saffron Amber", price: 0.0, color: "#D98354" },
-        { name: "Cobalt Blue", price: 150.0, color: "#1A2B4C" },
-        { name: "Forest Olive", price: 100.0, color: "#5A5F3D" }
-      ];
-    } else if (newOptType === "select") {
-      choices = [
-        { name: "Classic Standard", price: 0.0 },
-        { name: "Premium Engraved", price: 250.0 }
-      ];
+    if (newOptType === "color_swatch" || newOptType === "select") {
+      if (newChoices.length === 0) {
+        alert(`Please add at least one choice to configure your ${newOptType === "color_swatch" ? "Color Swatch" : "Dropdown Select"}.`);
+        return;
+      }
+      choices = newChoices;
     } else {
       choices = {
-        placeholder: "Enter custom monogram initials",
-        max_len: 8,
-        price: 150.0
+        placeholder: monogramPlaceholder.trim() || "Enter custom monogram initials",
+        max_len: Number(monogramMaxLen) || 8,
+        price: Number(monogramPrice) || 150.0
       };
     }
 
@@ -415,7 +442,13 @@ export default function ArtisanDashboard() {
         price_delta: 0.0
       }
     ]);
+    
+    // Reset inputs
     setNewOptLabel("");
+    setNewChoices([]);
+    setChoiceName("");
+    setChoicePrice(0);
+    setChoiceColor("#D98354");
   };
 
   const handleRemoveOption = (idxToRemove: number) => {
@@ -1306,6 +1339,136 @@ export default function ArtisanDashboard() {
                       </select>
                     </div>
                   </div>
+
+                  {/* Configured Choices section based on selection */}
+                  {(newOptType === "select" || newOptType === "color_swatch") && (
+                    <div className="bg-cream-dark/20 border border-sandstone-light/10 rounded-xl p-3.5 space-y-3 text-left">
+                      <h5 className="text-[9px] font-archivo font-extrabold uppercase tracking-wider text-sandstone-dark">
+                        Manage Choices ({newOptType === "color_swatch" ? "Color Swatches" : "Dropdown Options"})
+                      </h5>
+
+                      {/* Display added choices */}
+                      {newChoices.length > 0 ? (
+                        <div className="space-y-1">
+                          {newChoices.map((choice, index) => (
+                            <div key={index} className="flex justify-between items-center bg-white/45 py-1 px-2.5 rounded border border-sandstone-light/10 text-[10px] font-semibold text-foreground/80">
+                              <span className="flex items-center gap-1.5">
+                                {newOptType === "color_swatch" && (
+                                  <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: choice.color }} />
+                                )}
+                                <span>{choice.name} (Upcharge: +₹{choice.price})</span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveChoice(index)}
+                                className="text-[9px] text-rose-600 font-extrabold uppercase hover:underline cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[9px] text-foreground/40 italic">No custom choices added yet.</p>
+                      )}
+
+                      {/* Add new choice fields */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
+                        <div className="space-y-1">
+                          <label className="text-[7px] font-bold uppercase tracking-wider text-olive-dark">Choice Label</label>
+                          <input
+                            type="text"
+                            placeholder={newOptType === "color_swatch" ? "e.g. Cobalt Blue" : "e.g. 12 inches"}
+                            value={choiceName}
+                            onChange={(e) => setChoiceName(e.target.value)}
+                            className="w-full bg-cream-light border border-sandstone-light/35 rounded-lg py-1 px-2 text-[10px] focus:outline-none text-foreground font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[7px] font-bold uppercase tracking-wider text-olive-dark">Price upcharge (₹)</label>
+                          <input
+                            type="number"
+                            value={choicePrice}
+                            onChange={(e) => setChoicePrice(Number(e.target.value))}
+                            className="w-full bg-cream-light border border-sandstone-light/35 rounded-lg py-1 px-2 text-[10px] focus:outline-none text-foreground font-semibold"
+                          />
+                        </div>
+
+                        {newOptType === "color_swatch" ? (
+                          <div className="space-y-1">
+                            <label className="text-[7px] font-bold uppercase tracking-wider text-olive-dark block">Swatch color</label>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="color"
+                                value={choiceColor}
+                                onChange={(e) => setChoiceColor(e.target.value)}
+                                className="w-7 h-7 bg-transparent border-0 cursor-pointer p-0 block"
+                              />
+                              <input
+                                type="text"
+                                value={choiceColor}
+                                onChange={(e) => setChoiceColor(e.target.value)}
+                                className="w-16 bg-cream-light border border-sandstone-light/35 rounded-lg py-1 px-1.5 text-[9px] text-center focus:outline-none text-foreground font-bold"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="pt-2 sm:pt-0">
+                            <span className="hidden sm:inline-block w-full" />
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleAddChoice}
+                        className="w-full bg-white hover:bg-sandstone-light text-sandstone-dark hover:text-foreground text-[8px] font-archivo font-extrabold uppercase py-1.5 rounded-lg border border-sandstone-light/30 transition-all cursor-pointer"
+                      >
+                        + Add Custom Choice
+                      </button>
+                    </div>
+                  )}
+
+                  {newOptType === "text" && (
+                    <div className="bg-cream-dark/20 border border-sandstone-light/10 rounded-xl p-3.5 space-y-3.5 text-left">
+                      <h5 className="text-[9px] font-archivo font-extrabold uppercase tracking-wider text-sandstone-dark">
+                        Manage Monogram Configuration
+                      </h5>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div className="space-y-1">
+                          <label className="text-[7px] font-bold uppercase tracking-wider text-olive-dark">Placeholder text</label>
+                          <input
+                            type="text"
+                            value={monogramPlaceholder}
+                            onChange={(e) => setMonogramPlaceholder(e.target.value)}
+                            className="w-full bg-cream-light border border-sandstone-light/35 rounded-lg py-1.5 px-2 text-[10px] focus:outline-none text-foreground font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[7px] font-bold uppercase tracking-wider text-olive-dark">Max Characters</label>
+                          <input
+                            type="number"
+                            value={monogramMaxLen}
+                            onChange={(e) => setMonogramMaxLen(Number(e.target.value))}
+                            className="w-full bg-cream-light border border-sandstone-light/35 rounded-lg py-1.5 px-2 text-[10px] focus:outline-none text-foreground font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[7px] font-bold uppercase tracking-wider text-olive-dark">Upcharge Price (₹)</label>
+                          <input
+                            type="number"
+                            value={monogramPrice}
+                            onChange={(e) => setMonogramPrice(Number(e.target.value))}
+                            className="w-full bg-cream-light border border-sandstone-light/35 rounded-lg py-1.5 px-2 text-[10px] focus:outline-none text-foreground font-semibold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <button
                     type="button"
