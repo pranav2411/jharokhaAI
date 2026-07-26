@@ -125,7 +125,21 @@ function CatalogContent() {
         const res = await fetch(`${API_URL}/api/products`);
         if (res.ok) {
           const data = await res.json();
-          setProducts(data);
+          const parsedProducts = data.map((p: any) => {
+            let imgs = p.images;
+            if (typeof imgs === "string") {
+              try {
+                imgs = JSON.parse(imgs);
+              } catch (e) {
+                imgs = [];
+              }
+            }
+            return {
+              ...p,
+              images: Array.isArray(imgs) ? imgs : []
+            };
+          });
+          setProducts(parsedProducts);
         } else {
           setProducts(FALLBACK_PRODUCTS);
         }

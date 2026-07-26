@@ -108,6 +108,7 @@ export default function ArtisanDashboard() {
 
   // Marketing Assistant Widget State
   const [marketingProduct, setMarketingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [generatingMarketing, setGeneratingMarketing] = useState(false);
   const [marketingKit, setMarketingKit] = useState<any>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -121,7 +122,21 @@ export default function ArtisanDashboard() {
       const res = await fetch(`${API_URL}/api/products?artisan_id=1`); // Riya
       if (res.ok) {
         const data = await res.json();
-        setProducts(data);
+        const parsedProducts = data.map((p: any) => {
+          let imgs = p.images;
+          if (typeof imgs === "string") {
+            try {
+              imgs = JSON.parse(imgs);
+            } catch (e) {
+              imgs = [];
+            }
+          }
+          return {
+            ...p,
+            images: Array.isArray(imgs) ? imgs : []
+          };
+        });
+        setProducts(parsedProducts);
       }
       
       // Load artisan details
@@ -324,7 +339,44 @@ export default function ArtisanDashboard() {
     }
   };
 
+  const handleStartEdit = (p: any) => {
+    setEditingProduct(p);
+    setTitle(p.title);
+    setDescription(p.description);
+    setBasePrice(p.base_price);
+    setCategory(p.category_id || 2);
+    setIsCustomizable(p.is_customizable);
+    setProductImages(p.images || []);
+    
+    setCompiledPricingFormula(p.pricing_formula || "");
+    
+    if (p.customization_options && p.customization_options.length > 0) {
+      setOptName(p.customization_options[0].option_name);
+      setOptType(p.customization_options[0].option_type);
+    }
+    
+    const formEl = document.getElementById("add-creation-form");
+    if (formEl) {
+      formEl.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProduct(null);
+    setTitle("");
+    setDescription("");
+    setBasePrice(1200);
+    setCategory(2);
+    setIsCustomizable(true);
+    setProductImages([]);
+    setCompiledPricingFormula("");
+    setFormulaInstructions("");
+    setSandboxResult(null);
+    setQualityMatchReport(null);
+  };
+
   const handlePhotoUpload = async (file: File) => {
+
     if (productImages.length >= 6) {
       alert("Maximum 6 photos are allowed.");
       return;
@@ -574,8 +626,13 @@ export default function ArtisanDashboard() {
     };
 
     try {
-      const res = await fetch(`${API_URL}/api/products`, {
-        method: "POST",
+      const url = editingProduct 
+        ? `${API_URL}/api/admin/products/${editingProduct.id}`
+        : `${API_URL}/api/products`;
+      const method = editingProduct ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
@@ -589,6 +646,8 @@ export default function ArtisanDashboard() {
         setFormulaInstructions("");
         setSandboxResult(null);
         setQualityMatchReport(null);
+        setProductImages([]);
+        setEditingProduct(null);
         // Reload listings
         loadData();
         setTimeout(() => setSubmitStatus("none"), 3000);
@@ -596,10 +655,11 @@ export default function ArtisanDashboard() {
         setSubmitStatus("error");
       }
     } catch (err) {
-      console.error("Dashboard error creating product:", err);
+      console.error("Dashboard error saving product:", err);
       setSubmitStatus("error");
     }
   };
+
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-light text-foreground">
@@ -819,12 +879,22 @@ export default function ArtisanDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* Left Column: Create Listing Form */}
-          <section className="lg:col-span-5 bg-cream-dark/30 border border-sandstone-light/15 rounded-3xl p-6 space-y-6">
+          {/* Left Column: Create/Edit Listing Form */}
+          <section id="add-creation-form" className="lg:col-span-5 bg-cream-dark/30 border border-sandstone-light/15 rounded-3xl p-6 space-y-6">
             <h3 className="font-archivo text-base uppercase font-bold tracking-wider text-foreground flex items-center gap-1.5 border-b border-sandstone-light/20 pb-3">
-              <Plus className="w-5 h-5 text-coral-accent" />
-              List New Creation
+              {editingProduct ? (
+                <>
+                  <Settings className="w-5 h-5 text-coral-accent animate-spin-slow" />
+                  Edit Creation
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5 text-coral-accent" />
+                  List New Creation
+                </>
+              )}
             </h3>
+
 
             {/* AI Product Suggestions Panel */}
             <div className="bg-white/40 border border-sandstone-light/20 rounded-2xl p-4.5 space-y-4">
@@ -1207,13 +1277,25 @@ export default function ArtisanDashboard() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                className="w-full bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-xs font-archivo font-extrabold uppercase py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
-              >
-                Create Listing
-              </button>
+              <div className="flex gap-3">
+                {editingProduct && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="flex-1 bg-cream-dark/40 hover:bg-cream-dark text-foreground text-xs font-archivo font-extrabold uppercase py-3.5 rounded-xl transition-all shadow-md cursor-pointer text-center"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="flex-1 bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-xs font-archivo font-extrabold uppercase py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {editingProduct ? "Save Changes" : "Create Listing"}
+                </button>
+              </div>
             </form>
+
           </section>
 
           {/* Right Column: Listings & Active Orders */}
@@ -1353,6 +1435,13 @@ export default function ArtisanDashboard() {
                         <div className="flex gap-2">
                           <button
                             type="button"
+                            onClick={() => handleStartEdit(p)}
+                            className="bg-cream-dark/50 hover:bg-sandstone-dark text-sandstone-dark hover:text-white text-[9px] font-archivo font-extrabold uppercase py-1.5 px-3 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <Settings className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleDeleteProduct(p.id)}
                             className="bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white text-[9px] font-archivo font-extrabold uppercase py-1.5 px-3 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
                           >
@@ -1367,6 +1456,7 @@ export default function ArtisanDashboard() {
                           </button>
                         </div>
                       </div>
+
 
                     </div>
                   ))}
