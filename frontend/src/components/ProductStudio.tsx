@@ -25,7 +25,7 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
   const categorySlug = product.category?.slug || "";
   const titleLower = product.title.toLowerCase();
 
-  const [viewMode, setViewMode] = useState<"photo" | "ai_render" | "svg">("ai_render");
+  const [viewMode, setViewMode] = useState<"photo" | "ai_render" | "svg">("photo");
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [aiImageUrl, setAiImageUrl] = useState<string>("");
@@ -680,7 +680,7 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
             : "text-foreground/60 hover:text-foreground"
             }`}
         >
-          ✨ AI Render
+          AI Render
         </button>
         <button
           type="button"
@@ -690,7 +690,7 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
             : "text-foreground/60 hover:text-foreground"
             }`}
         >
-          📸 Original Photo
+          Customized Photo
         </button>
         <button
           type="button"
@@ -700,7 +700,7 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
             : "text-foreground/60 hover:text-foreground"
             }`}
         >
-          📐 SVG Mockup
+          SVG Mockup
         </button>
       </div>
 
@@ -709,7 +709,7 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
           <div className="bg-cream-dark/30 border border-sandstone-light/15 rounded-3xl overflow-hidden aspect-square relative shadow-md flex flex-col items-center justify-center p-6 text-center min-h-[300px]">
             {aiGenerating ? (
               <div className="space-y-3 animate-pulse">
-                <Sparkles className="w-10 h-10 text-coral-accent animate-spin-slow mx-auto" />
+                <span className="text-coral-accent text-sm font-bold animate-spin-slow">Generating...</span>
                 <p className="text-xs font-archivo font-black text-sandstone-dark uppercase">AI Rendering Preview...</p>
                 <p className="text-[10px] text-foreground/50 max-w-xs leading-relaxed">
                   Merging your selections to create a photorealistic preview...
@@ -727,7 +727,7 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
                 {/* Custom options glassmorphic badge overlay */}
                 <div className="absolute bottom-4 left-4 right-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white/25 p-3 shadow-md text-left space-y-1">
                   <span className="text-[8px] font-archivo font-black uppercase tracking-wider text-sandstone-dark block">
-                    ✨ AI Customization Specs
+                    AI Customization Specs
                   </span>
                   <div className="grid grid-cols-2 gap-1.5 text-[9px] font-semibold text-foreground/80">
                     {colorSelections.slice(0, 2).map((col, idx) => (
@@ -755,15 +755,11 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
                   onClick={generateAiImage}
                   className="absolute top-3 right-3 bg-black/60 hover:bg-black/85 text-white py-1.5 px-3 rounded-xl text-[9px] font-archivo font-black uppercase tracking-wider flex items-center gap-1 transition-all shadow-md cursor-pointer"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-coral-accent" />
                   Regenerate
                 </button>
               </div>
             ) : (
               <div className="space-y-4 max-w-sm">
-                <div className="w-12 h-12 bg-coral-accent/10 rounded-2xl flex items-center justify-center mx-auto">
-                  <Sparkles className="w-6 h-6 text-coral-accent" />
-                </div>
                 <div>
                   <h4 className="font-archivo text-xs uppercase font-bold text-foreground tracking-wider">
                     Generate AI Concept Photo
@@ -775,9 +771,8 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
                 <button
                   type="button"
                   onClick={generateAiImage}
-                  className="w-full bg-coral-accent hover:bg-coral-dark text-white font-archivo font-black uppercase text-[10px] tracking-wider py-2.5 px-5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full bg-coral-accent hover:bg-coral-dark text-white font-archivo font-black uppercase text-[10px] tracking-wider py-2.5 px-5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center"
                 >
-                  <Sparkles className="w-4 h-4 animate-spin-slow" />
                   Generate AI Preview
                 </button>
               </div>
@@ -787,7 +782,7 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
           {/* Detailed prompt description preview */}
           <div className="bg-cream-light border border-sandstone-light/10 p-4 rounded-3xl text-left space-y-1">
             <span className="text-[10px] font-archivo font-black uppercase tracking-wider text-olive-dark flex items-center gap-1">
-              <Info className="w-3.5 h-3.5 text-coral-accent" /> Generation Model Prompt
+              Generation Model Prompt
             </span>
             <p className="text-[9px] text-foreground/60 leading-relaxed italic">
               "A professional studio photograph of a customized handcrafted {product.title}
@@ -817,6 +812,27 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
                 className="absolute inset-0 pointer-events-none mix-blend-color opacity-25 transition-all duration-500" 
                 style={{ backgroundColor: selectedColorCode }} 
               />
+            )}
+
+            {/* Real Monogram Engraving Overlay directly on the uploaded photo */}
+            {mainText && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div 
+                  className="bg-black/15 text-[#301c0c] font-serif font-black px-4.5 py-2.5 rounded-xl border border-white/20 select-none tracking-widest animate-fade-in-up"
+                  style={{
+                    fontFamily: "'Georgia', 'Times New Roman', serif",
+                    fontSize: "20px",
+                    letterSpacing: "0.25em",
+                    transform: "rotate(-4deg) perspective(600px) rotateY(12deg)",
+                    textShadow: "1px 1px 0px rgba(255,255,255,0.25), -1px -1px 0px rgba(0,0,0,0.85)",
+                    opacity: 0.9,
+                    mixBlendMode: "multiply",
+                    boxShadow: "inset 0 0 10px rgba(0,0,0,0.3)"
+                  }}
+                >
+                  {mainText}
+                </div>
+              </div>
             )}
             
             {/* Overlay */}
@@ -849,7 +865,7 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
           <div className="bg-cream-light border border-sandstone-light/10 p-4 rounded-3xl text-left space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-archivo font-black uppercase tracking-wider text-olive-dark flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-coral-accent" /> AI Custom Visualizer
+                AI Custom Visualizer
               </span>
               <button
                 type="button"
@@ -857,7 +873,7 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
                 disabled={analyzing}
                 className="bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-[8px] font-archivo font-extrabold uppercase py-1 px-2.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
               >
-                {analyzing ? "AI Analyzing..." : "Describe Custom Look"}
+                {analyzing ? "Analyzing..." : "Describe Custom Look"}
               </button>
             </div>
             
