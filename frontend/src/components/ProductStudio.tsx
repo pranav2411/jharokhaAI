@@ -25,9 +25,11 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
   const categorySlug = product.category?.slug || "";
   const titleLower = product.title.toLowerCase();
 
-  const [viewMode, setViewMode] = useState<"photo" | "svg">("photo");
+  const [viewMode, setViewMode] = useState<"photo" | "ai_render" | "svg">("ai_render");
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [aiImageUrl, setAiImageUrl] = useState<string>("");
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   // -------------------------------------------------------------------------
   // DYNAMIC SELECTION PARSER (Extracts colors, texts, and dropdown options)
@@ -60,6 +62,37 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
     }));
 
   const allChoicesString = selectSelections.map(s => String(s.choiceName || "").toLowerCase()).join(" ");
+
+  // Specs specs for prompt rendering
+  const colorSpec = colorSelections.map(c => `${c.optionName}: ${c.name}`).join(", ");
+  const dropdownSpec = selectSelections.map(s => `${s.optionName}: ${s.choiceName}`).join(", ");
+  const textSpec = enteredTexts.map(t => `${t.optionName}: "${t.value}"`).join(", ");
+
+  const generateAiImage = () => {
+    setAiGenerating(true);
+    
+    const promptParts = [
+      `A professional high-end studio product photograph of a customized handcrafted ${product.title}.`,
+      colorSpec ? `Colors: ${colorSpec}.` : "",
+      dropdownSpec ? `Options: ${dropdownSpec}.` : "",
+      textSpec ? `Custom Engraving/Monogram text: ${textSpec}.` : "",
+      "Perfect sharp focus, soft realistic shadows, pristine exhibition lighting, detailed textures, premium marketplace photography, 8k resolution."
+    ].filter(Boolean).join(" ");
+    
+    const seed = Math.floor(Math.random() * 1000000);
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptParts)}?width=600&height=600&nologo=true&seed=${seed}`;
+    
+    const img = new Image();
+    img.src = url;
+    img.onload = () => {
+      setAiImageUrl(url);
+      setAiGenerating(false);
+    };
+    img.onerror = () => {
+      setAiImageUrl(url);
+      setAiGenerating(false);
+    };
+  };
 
   const handleAiAnalysis = async () => {
     setAnalyzing(true);
@@ -638,7 +671,17 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
   return (
     <div className="w-full flex flex-col items-center">
       {/* Toggle View Mode */}
-      <div className="flex bg-cream-dark/40 border border-sandstone-light/15 rounded-xl p-1 max-w-xs mx-auto mb-2 text-xs">
+      <div className="flex bg-cream-dark/40 border border-sandstone-light/15 rounded-xl p-1 max-w-md mx-auto mb-3 text-xs w-full sm:w-auto">
+        <button
+          type="button"
+          onClick={() => setViewMode("ai_render")}
+          className={`flex-grow py-1.5 px-3 rounded-lg font-bold transition-all uppercase font-archivo text-[9px] tracking-wider cursor-pointer ${viewMode === "ai_render"
+            ? "bg-white text-foreground shadow-sm"
+            : "text-foreground/60 hover:text-foreground"
+            }`}
+        >
+          ✨ AI Render
+        </button>
         <button
           type="button"
           onClick={() => setViewMode("photo")}
@@ -647,7 +690,7 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
             : "text-foreground/60 hover:text-foreground"
             }`}
         >
-          Photo + AI Customizations
+          📸 Original Photo
         </button>
         <button
           type="button"
@@ -657,11 +700,106 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
             : "text-foreground/60 hover:text-foreground"
             }`}
         >
-          Interactive SVG Mockup
+          📐 SVG Mockup
         </button>
       </div>
 
-      {viewMode === "photo" ? (
+      {viewMode === "ai_render" && (
+        <div className="w-full space-y-4">
+          <div className="bg-cream-dark/30 border border-sandstone-light/15 rounded-3xl overflow-hidden aspect-square relative shadow-md flex flex-col items-center justify-center p-6 text-center min-h-[300px]">
+            {aiGenerating ? (
+              <div className="space-y-3 animate-pulse">
+                <Sparkles className="w-10 h-10 text-coral-accent animate-spin-slow mx-auto" />
+                <p className="text-xs font-archivo font-black text-sandstone-dark uppercase">AI Rendering Preview...</p>
+                <p className="text-[10px] text-foreground/50 max-w-xs leading-relaxed">
+                  Merging your selections to create a photorealistic preview...
+                </p>
+              </div>
+            ) : aiImageUrl ? (
+              <div className="w-full h-full relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={aiImageUrl}
+                  alt="AI Customized Concept"
+                  className="w-full h-full object-cover transition-all duration-500"
+                />
+                
+                {/* Custom options glassmorphic badge overlay */}
+                <div className="absolute bottom-4 left-4 right-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white/25 p-3 shadow-md text-left space-y-1">
+                  <span className="text-[8px] font-archivo font-black uppercase tracking-wider text-sandstone-dark block">
+                    ✨ AI Customization Specs
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5 text-[9px] font-semibold text-foreground/80">
+                    {colorSelections.slice(0, 2).map((col, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full border border-black/10" style={{ backgroundColor: col.color }} />
+                        <span className="truncate">{col.optionName}: <strong>{col.name}</strong></span>
+                      </div>
+                    ))}
+                    {mainText && (
+                      <div className="truncate">
+                        <span>Engraving: <strong>"{mainText}"</strong></span>
+                      </div>
+                    )}
+                    {selectSelections.slice(0, 2).map((sel, idx) => (
+                      <div key={idx} className="truncate">
+                        <span>{sel.optionName}: <strong>{sel.choiceName}</strong></span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Regenerate button */}
+                <button
+                  type="button"
+                  onClick={generateAiImage}
+                  className="absolute top-3 right-3 bg-black/60 hover:bg-black/85 text-white py-1.5 px-3 rounded-xl text-[9px] font-archivo font-black uppercase tracking-wider flex items-center gap-1 transition-all shadow-md cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-coral-accent" />
+                  Regenerate
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4 max-w-sm">
+                <div className="w-12 h-12 bg-coral-accent/10 rounded-2xl flex items-center justify-center mx-auto">
+                  <Sparkles className="w-6 h-6 text-coral-accent" />
+                </div>
+                <div>
+                  <h4 className="font-archivo text-xs uppercase font-bold text-foreground tracking-wider">
+                    Generate AI Concept Photo
+                  </h4>
+                  <p className="text-[10px] text-foreground/50 leading-relaxed mt-1">
+                    Render your custom options (monograms, glazes, and patterns) in a beautiful, realistic studio photograph.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={generateAiImage}
+                  className="w-full bg-coral-accent hover:bg-coral-dark text-white font-archivo font-black uppercase text-[10px] tracking-wider py-2.5 px-5 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Sparkles className="w-4 h-4 animate-spin-slow" />
+                  Generate AI Preview
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {/* Detailed prompt description preview */}
+          <div className="bg-cream-light border border-sandstone-light/10 p-4 rounded-3xl text-left space-y-1">
+            <span className="text-[10px] font-archivo font-black uppercase tracking-wider text-olive-dark flex items-center gap-1">
+              <Info className="w-3.5 h-3.5 text-coral-accent" /> Generation Model Prompt
+            </span>
+            <p className="text-[9px] text-foreground/60 leading-relaxed italic">
+              "A professional studio photograph of a customized handcrafted {product.title}
+              {colorSpec && `, colors: ${colorSpec}`}
+              {dropdownSpec && `, options: ${dropdownSpec}`}
+              {textSpec && `, custom monogram: ${textSpec}`}, high-end lighting, detailed textures."
+            </p>
+          </div>
+        </div>
+      )}
+
+      {viewMode === "photo" && (
         <div className="w-full space-y-4">
           <div className="bg-cream-dark/30 border border-sandstone-light/15 rounded-3xl overflow-hidden aspect-square relative shadow-md">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -680,8 +818,8 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
                 style={{ backgroundColor: selectedColorCode }} 
               />
             )}
-            {/* Custom options glassmorphic badge grid */}
-
+            
+            {/* Overlay */}
             <div className="absolute bottom-4 left-4 right-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 p-3 shadow space-y-1.5 text-left">
               <span className="text-[8px] font-archivo font-black uppercase tracking-wider text-sandstone-dark block">
                 Active Configurations Overlay
@@ -734,9 +872,9 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
             )}
           </div>
         </div>
-      ) : (
-        renderContent()
       )}
+
+      {viewMode === "svg" && renderContent()}
       
       {/* Disclaimer warning */}
       <p className="text-[9px] text-foreground/45 italic text-center max-w-xs mt-3 leading-relaxed border-t border-sandstone-light/10 pt-2.5 w-full select-none">
