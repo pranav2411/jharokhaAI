@@ -101,9 +101,18 @@ export const Navbar: React.FC = () => {
                 <Link
                   href="/settings"
                   title="Edit Settings"
-                  className="w-9 h-9 rounded-full bg-olive-dark hover:bg-olive-light text-cream-light font-archivo font-bold flex items-center justify-center text-sm border-2 border-sandstone-light/40 shadow-sm transition-all"
+                  className="w-9 h-9 rounded-full overflow-hidden bg-olive-dark hover:bg-olive-light text-cream-light font-archivo font-bold flex items-center justify-center text-sm border-2 border-sandstone-light/40 shadow-sm transition-all"
                 >
-                  {getInitials(currentUser.name)}
+                  {currentUser.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img 
+                      src={currentUser.photo_url} 
+                      alt={currentUser.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getInitials(currentUser.name)
+                  )}
                 </Link>
                 <div className="text-left">
                   <Link href="/settings" className="text-xs font-semibold text-foreground leading-tight hover:text-[#737851] transition-colors block">
@@ -198,8 +207,17 @@ export const Navbar: React.FC = () => {
           {currentUser ? (
             <div className="pt-2 border-t border-sandstone-light/30 flex items-center justify-between px-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-olive-dark text-cream-light font-bold flex items-center justify-center text-xs">
-                  {getInitials(currentUser.name)}
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-olive-dark text-cream-light font-bold flex items-center justify-center text-xs border border-sandstone-light/40">
+                  {currentUser.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img 
+                      src={currentUser.photo_url} 
+                      alt={currentUser.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getInitials(currentUser.name)
+                  )}
                 </div>
                 <span className="text-xs font-semibold text-foreground">{currentUser.name}</span>
               </div>

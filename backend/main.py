@@ -120,6 +120,7 @@ class UserProfileUpdate(BaseModel):
     email: str
     phone: Optional[str] = None
     shipping_address: Optional[str] = None
+    photo_url: Optional[str] = None
     password: Optional[str] = None
 
 class ArtisanProfileUpdate(BaseModel):
@@ -978,6 +979,8 @@ def update_user_profile(req: UserProfileUpdate, session: Session = Depends(get_s
     user.email = req.email.strip().lower()
     user.phone = req.phone
     user.shipping_address = req.shipping_address
+    if req.photo_url is not None:
+        user.photo_url = req.photo_url
     if req.password and req.password.strip():
         user.password_hash = hash_password(req.password)
         

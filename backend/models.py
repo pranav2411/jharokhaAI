@@ -10,6 +10,7 @@ class User(SQLModel, table=True):
     role: str = Field(default="customer")  # customer, artisan, admin
     phone: Optional[str] = None
     shipping_address: Optional[str] = None
+    photo_url: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships

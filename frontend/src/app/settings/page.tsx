@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
   const [password, setPassword] = useState("");
   
   // Feedback states
@@ -29,8 +30,49 @@ export default function SettingsPage() {
       setEmail(currentUser.email || "");
       setPhone(currentUser.phone || "");
       setAddress(currentUser.shipping_address || "");
+      setPhotoUrl(currentUser.photo_url || "");
     }
   }, [currentUser]);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        // Resize image to max 300px for profile photo
+        const maxDim = 300;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const base64 = canvas.toDataURL("image/jpeg", 0.75);
+        setPhotoUrl(base64);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +90,7 @@ export default function SettingsPage() {
           email,
           phone: phone || null,
           shipping_address: address || null,
+          photo_url: photoUrl || null,
           password: password || null
         })
       });
@@ -60,6 +103,7 @@ export default function SettingsPage() {
           email: updatedUser.email,
           phone: updatedUser.phone,
           shipping_address: updatedUser.shipping_address,
+          photo_url: updatedUser.photo_url,
           role: updatedUser.role
         });
         setFeedback({ type: "success", msg: "Profile settings updated successfully!" });
@@ -124,6 +168,35 @@ export default function SettingsPage() {
 
             <form onSubmit={handleSaveProfile} className="space-y-6">
               
+              {/* Profile Avatar Upload */}
+              <div className="flex flex-col items-center justify-center space-y-3 pb-6 border-b border-sandstone-light/10">
+                <div className="relative group w-24 h-24 rounded-full overflow-hidden border-2 border-sandstone-light/35 bg-cream-dark/20 shadow-sm flex items-center justify-center">
+                  {photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img 
+                      src={photoUrl} 
+                      alt="Profile Avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-10 h-10 text-sandstone-light" />
+                  )}
+                  <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-[9px] font-archivo font-extrabold uppercase text-white tracking-wider cursor-pointer transition-all">
+                    <span>Upload</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handlePhotoUpload} 
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] font-archivo font-black uppercase text-sandstone-dark">Profile Picture</p>
+                  <p className="text-[8px] text-foreground/45">Click image to upload. Recommended JPG/PNG under 2MB.</p>
+                </div>
+              </div>
+
               {/* Group 1: Personal Info */}
               <div className="space-y-4">
                 <h3 className="font-archivo text-xs uppercase tracking-wider font-extrabold text-foreground border-b border-sandstone-light/10 pb-2">
