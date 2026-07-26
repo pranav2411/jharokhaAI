@@ -1,7 +1,11 @@
 import os
 from sqlmodel import SQLModel, create_engine, Session
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./jharokha.db").strip()
+# Use persistent storage directory if running on Render with storage mount
+db_dir = "/data" if os.path.exists("/data") else "."
+db_path = os.path.join(db_dir, "jharokha.db")
+
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{db_path}").strip()
 
 # SQLite needs connect_args={"check_same_thread": False} to run in multi-threaded FastAPI.
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
