@@ -347,15 +347,10 @@ export default function ArtisanDashboard() {
     if (category === 1) categoryName = "textile";
     if (category === 4) categoryName = "metal";
 
+    const formData = new FormData();
+    formData.append("category", categoryName);
+
     try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const file = new File([blob], "product.png", { type: blob.type });
-
-      const formData = new FormData();
-      formData.append("category", categoryName);
-      formData.append("image", file);
-
       const res = await fetch(`${API_URL}/api/ai/replace-backdrop`, {
         method: "POST",
         body: formData
@@ -369,6 +364,8 @@ export default function ArtisanDashboard() {
           return updated;
         });
         setBackdropFeedback("Backdrop replaced with high-end studio setting!");
+      } else {
+        setBackdropFeedback("Failed to replace backdrop.");
       }
     } catch (err) {
       console.error("Error replacing backdrop:", err);
@@ -377,6 +374,7 @@ export default function ArtisanDashboard() {
       setReplacingBackdrop(false);
     }
   };
+
 
 
   // Trigger AI product metadata suggestion and quality price validation

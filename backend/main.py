@@ -698,34 +698,12 @@ def create_review(review: models.Review, session: Session = Depends(get_session)
 
 @app.post("/api/admin/upload")
 def upload_image(request: Request, file: UploadFile = File(...)):
-    # Try to find Next.js frontend directory to save files directly
-    paths_to_try = [
-        os.path.join("..", "frontend", "public", "uploads"),
-        os.path.join("frontend", "public", "uploads"),
-        os.path.join("public", "uploads"),
-    ]
-    
     upload_dir = "uploads"
-    found_frontend = False
-    
-    for p in paths_to_try:
-        abs_p = os.path.abspath(p)
-        parent_dir = os.path.dirname(abs_p)
-        if os.path.exists(parent_dir):
-            upload_dir = abs_p
-            found_frontend = True
-            break
-            
     os.makedirs(upload_dir, exist_ok=True)
     
-    # Save the file
     file_path = os.path.join(upload_dir, file.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-        
-    if found_frontend:
-        # Next.js can serve it relative to the public directory
-        return {"url": f"/uploads/{file.filename}"}
         
     base_url = str(request.base_url).rstrip("/")
     return {"url": f"{base_url}/static/{file.filename}"}
@@ -970,7 +948,7 @@ def api_check_feasibility(req: CustomizationFeasibilityRequest):
 def api_replace_backdrop(
     request: Request,
     category: str = Form(...),
-    image: UploadFile = File(...)
+    image: Optional[UploadFile] = File(None)
 ):
     cat = category.lower()
     if "pottery" in cat or "ceramic" in cat:
