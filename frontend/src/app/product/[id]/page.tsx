@@ -648,6 +648,9 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                   <img
                     src={selectedImage}
                     alt={product.title}
+                    onError={(e) => {
+                      e.currentTarget.src = "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80";
+                    }}
                     className="w-full h-full object-cover"
                   />
 
@@ -672,11 +675,19 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                           }`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img} alt="" className="w-full h-full object-cover" />
+                        <img 
+                          src={img} 
+                          alt="" 
+                          onError={(e) => {
+                            e.currentTarget.src = "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80";
+                          }}
+                          className="w-full h-full object-cover" 
+                        />
                       </button>
                     ))}
                   </div>
                 )}
+
 
                 {/* Disclaimer warning */}
                 <p className="text-[9px] text-foreground/45 italic text-center max-w-xs mx-auto mt-3 leading-relaxed border-t border-sandstone-light/10 pt-2.5 w-full">

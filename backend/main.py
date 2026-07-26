@@ -21,10 +21,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ensure uploads folder is served if it exists
-if not os.path.exists("uploads"):
-    os.makedirs("uploads", exist_ok=True)
-app.mount("/static", StaticFiles(directory="uploads"), name="static")
+# Configure persistent or ephemeral uploads folder depending on Render storage mount
+import shutil
+
+if os.path.exists("/data"):
+    upload_dir = "/data/uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+    # Copy default studio images to persistent storage if needed
+    repo_uploads = "uploads"
+    if os.path.exists(repo_uploads):
+        for filename in os.listdir(repo_uploads):
+            src_path = os.path.join(repo_uploads, filename)
+            dest_path = os.path.join(upload_dir, filename)
+            if os.path.isfile(src_path) and not os.path.exists(dest_path):
+                try:
+                    shutil.copy(src_path, dest_path)
+                    print(f"Copied studio asset {filename} to persistent storage.")
+                except Exception as e:
+                    print(f"Failed to copy studio asset {filename}: {e}")
+else:
+    upload_dir = "uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory=upload_dir), name="static")
+
 
 @app.on_event("startup")
 def on_startup():
@@ -698,15 +718,16 @@ def create_review(review: models.Review, session: Session = Depends(get_session)
 
 @app.post("/api/admin/upload")
 def upload_image(request: Request, file: UploadFile = File(...)):
-    upload_dir = "uploads"
-    os.makedirs(upload_dir, exist_ok=True)
+    active_dir = "/data/uploads" if os.path.exists("/data") else "uploads"
+    os.makedirs(active_dir, exist_ok=True)
     
-    file_path = os.path.join(upload_dir, file.filename)
+    file_path = os.path.join(active_dir, file.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
     base_url = str(request.base_url).rstrip("/")
     return {"url": f"{base_url}/static/{file.filename}"}
+
 
 @app.put("/api/admin/products/{product_id}")
 def update_product(

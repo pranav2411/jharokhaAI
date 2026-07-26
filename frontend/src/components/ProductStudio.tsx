@@ -1,12 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Sparkles, Info } from "lucide-react";
+import { API_URL } from "@/config";
 
 interface ProductStudioProps {
   product: {
     id: number;
     title: string;
+    description: string;
+    images?: string[];
     category?: {
       id: number;
       name: string;
@@ -21,6 +24,10 @@ interface ProductStudioProps {
 export default function ProductStudio({ product, selections, textInputs }: ProductStudioProps) {
   const categorySlug = product.category?.slug || "";
   const titleLower = product.title.toLowerCase();
+
+  const [viewMode, setViewMode] = useState<"photo" | "svg">("photo");
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   // -------------------------------------------------------------------------
   // DYNAMIC SELECTION PARSER (Extracts colors, texts, and dropdown options)
@@ -53,6 +60,44 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
     }));
 
   const allChoicesString = selectSelections.map(s => s.choiceName.toLowerCase()).join(" ");
+
+  const handleAiAnalysis = async () => {
+    setAnalyzing(true);
+    setAiAnalysis(null);
+
+    const selectionsText = Object.entries(selections)
+      .map(([k, v]) => `${k}: ${typeof v === "object" ? v.name : v}`)
+      .join(", ");
+    const textsText = Object.entries(textInputs)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+
+    const requestText = `Glaze/Finish: ${primaryName}. Pattern/Styling: ${selectionsText}. Monogram/Engraving: ${textsText || "None"}.`;
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai/check-feasibility`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_title: product.title,
+          product_desc: product.description,
+          custom_request: requestText
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAiAnalysis(data.reason);
+      } else {
+        setAiAnalysis("Failed to obtain live visualizer advice. Please verify API connection.");
+      }
+    } catch (err) {
+      console.error("Error analyzing customizations:", err);
+      setAiAnalysis("Network error loading dynamic preview description.");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   // -------------------------------------------------------------------------
   // GENERATIVE TEMPLATE 1: Ceramic & Pottery Vessels
@@ -548,7 +593,98 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
 
   return (
     <div className="w-full flex flex-col items-center">
-      {renderContent()}
+      {/* Toggle View Mode */}
+      <div className="flex bg-cream-dark/40 border border-sandstone-light/15 rounded-xl p-1 max-w-xs mx-auto mb-2 text-xs">
+        <button
+          type="button"
+          onClick={() => setViewMode("photo")}
+          className={`flex-grow py-1.5 px-3 rounded-lg font-bold transition-all uppercase font-archivo text-[9px] tracking-wider cursor-pointer ${viewMode === "photo"
+            ? "bg-white text-foreground shadow-sm"
+            : "text-foreground/60 hover:text-foreground"
+            }`}
+        >
+          Photo + AI Customizations
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode("svg")}
+          className={`flex-grow py-1.5 px-3 rounded-lg font-bold transition-all uppercase font-archivo text-[9px] tracking-wider cursor-pointer ${viewMode === "svg"
+            ? "bg-white text-foreground shadow-sm"
+            : "text-foreground/60 hover:text-foreground"
+            }`}
+        >
+          Interactive SVG Mockup
+        </button>
+      </div>
+
+      {viewMode === "photo" ? (
+        <div className="w-full space-y-4">
+          <div className="bg-cream-dark/30 border border-sandstone-light/15 rounded-3xl overflow-hidden aspect-square relative shadow-md">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={product.images?.[0] || "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80"}
+              alt={product.title}
+              onError={(e) => {
+                e.currentTarget.src = "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80";
+              }}
+              className="w-full h-full object-cover"
+            />
+            {/* Custom options glassmorphic badge grid */}
+            <div className="absolute bottom-4 left-4 right-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 p-3 shadow space-y-1.5 text-left">
+              <span className="text-[8px] font-archivo font-black uppercase tracking-wider text-sandstone-dark block">
+                Active Configurations Overlay
+              </span>
+              <div className="grid grid-cols-2 gap-1.5 text-[9px] font-semibold text-foreground/80">
+                {colorSelections.slice(0, 2).map((col, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full border border-black/10" style={{ backgroundColor: col.color }} />
+                    <span className="truncate">{col.optionName}: <strong>{col.name}</strong></span>
+                  </div>
+                ))}
+                {mainText && (
+                  <div className="truncate">
+                    <span>Engraving: <strong>"{mainText}"</strong></span>
+                  </div>
+                )}
+                {selectSelections.slice(0, 2).map((sel, idx) => (
+                  <div key={idx} className="truncate">
+                    <span>{sel.optionName}: <strong>{sel.choiceName}</strong></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* AI Preview Assistant */}
+          <div className="bg-cream-light border border-sandstone-light/10 p-4 rounded-3xl text-left space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-archivo font-black uppercase tracking-wider text-olive-dark flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-coral-accent" /> AI Custom Visualizer
+              </span>
+              <button
+                type="button"
+                onClick={handleAiAnalysis}
+                disabled={analyzing}
+                className="bg-sandstone-dark hover:bg-sandstone-light text-white hover:text-foreground text-[8px] font-archivo font-extrabold uppercase py-1 px-2.5 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+              >
+                {analyzing ? "AI Analyzing..." : "Describe Custom Look"}
+              </button>
+            </div>
+            
+            {aiAnalysis ? (
+              <p className="text-[10px] font-medium leading-relaxed text-foreground/80 bg-white/50 border border-sandstone-light/10 p-3 rounded-2xl animate-fade-in-up">
+                {aiAnalysis}
+              </p>
+            ) : (
+              <p className="text-[9px] text-foreground/45 leading-relaxed">
+                Click "Describe Custom Look" to let the AI analyze your selected options against the uploaded photo structure and detail the expected final handcrafted look.
+              </p>
+            )}
+          </div>
+        </div>
+      ) : (
+        renderContent()
+      )}
       
       {/* Disclaimer warning */}
       <p className="text-[9px] text-foreground/45 italic text-center max-w-xs mt-3 leading-relaxed border-t border-sandstone-light/10 pt-2.5 w-full select-none">
