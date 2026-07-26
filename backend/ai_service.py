@@ -20,12 +20,18 @@ if not GEMINI_API_KEY:
                             break
 
 def call_gemini(contents: list, system_instruction: Optional[str] = None) -> str:
-    """Helper to call Gemini API via urllib. Falls back to mock responses if key is missing or fails."""
+    """Helper to call Gemini API via urllib. Falls back to other endpoints or mock responses if fails."""
     if not GEMINI_API_KEY:
         raise ValueError("Missing GEMINI_API_KEY environment variable.")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    
+    # Try different endpoints in order to handle different developer account permissions/version defaults
+    endpoints = [
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
+        f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_API_KEY}"
+    ]
+
     payload = {
         "contents": contents,
         "generationConfig": {
@@ -36,24 +42,34 @@ def call_gemini(contents: list, system_instruction: Optional[str] = None) -> str
         payload["systemInstruction"] = {
             "parts": [{"text": system_instruction}]
         }
-        
-    try:
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"}
-        )
-        with urllib.request.urlopen(req, timeout=15) as response:
-            res_data = json.loads(response.read().decode())
-            text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-            return text
-    except urllib.error.HTTPError as e:
-        err_msg = e.read().decode()
-        print(f"Gemini HTTP Error: {err_msg}")
-        raise ValueError(f"Gemini API call failed: {e.code} - {err_msg}")
-    except Exception as e:
-        print(f"Gemini Connection Error: {str(e)}")
-        raise ValueError(f"Gemini API communication failed: {str(e)}")
+
+    last_error = None
+    for url in endpoints:
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=15) as response:
+                res_data = json.loads(response.read().decode())
+                text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                return text
+        except urllib.error.HTTPError as e:
+            err_msg = e.read().decode()
+            last_error = f"{e.code} - {err_msg}"
+            if e.code == 404 or "not found" in err_msg.lower():
+                print(f"Endpoint {url.split('?')[0]} returned model not found (404), trying next endpoint...")
+                continue
+            else:
+                print(f"Gemini HTTP Error: {err_msg}")
+                raise ValueError(f"Gemini API call failed: {e.code} - {err_msg}")
+        except Exception as e:
+            last_error = str(e)
+            print(f"Gemini Connection Error: {str(e)}")
+            continue
+
+    raise ValueError(f"Gemini API call failed for all endpoints. Last error: {last_error}")
 
 # --- High Fidelity Fallbacks for Demo and local dev without Key ---
 
