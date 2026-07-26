@@ -16,7 +16,8 @@ export default function SettingsPage() {
   // Profile form states
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phoneCountryCode, setPhoneCountryCode] = useState("+91");
+  const [phoneVal, setPhoneVal] = useState("");
   const [address, setAddress] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [password, setPassword] = useState("");
@@ -60,9 +61,29 @@ export default function SettingsPage() {
     if (currentUser) {
       setName(currentUser.name || "");
       setEmail(currentUser.email || "");
-      setPhone(currentUser.phone || "");
       setAddress(currentUser.shipping_address || "");
       setPhotoUrl(currentUser.photo_url || "");
+      
+      const rawPhone = currentUser.phone || "";
+      if (rawPhone.startsWith("+")) {
+        const prefixes = ["+971", "+91", "+44", "+61", "+1"];
+        let matched = false;
+        for (const p of prefixes) {
+          if (rawPhone.startsWith(p)) {
+            setPhoneCountryCode(p);
+            setPhoneVal(rawPhone.slice(p.length));
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          setPhoneCountryCode("+91");
+          setPhoneVal(rawPhone);
+        }
+      } else {
+        setPhoneCountryCode("+91");
+        setPhoneVal(rawPhone);
+      }
     }
   }, [currentUser]);
 
@@ -120,7 +141,7 @@ export default function SettingsPage() {
           user_id: currentUser.id,
           name,
           email,
-          phone: phone || null,
+          phone: phoneVal.trim() ? (phoneCountryCode + phoneVal.trim()) : null,
           shipping_address: address || null,
           photo_url: photoUrl || null,
           password: password || null
@@ -268,15 +289,28 @@ export default function SettingsPage() {
 
                   <div className="space-y-1.5 sm:col-span-2">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Phone Number</label>
-                    <div className="relative">
-                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sandstone-light" />
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="e.g. +91 99999 88888"
-                        className="w-full bg-cream-light/35 border border-sandstone-light/45 focus:border-[#737851] rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium focus:outline-none text-foreground"
-                      />
+                    <div className="flex gap-2">
+                      <select
+                        value={phoneCountryCode}
+                        onChange={(e) => setPhoneCountryCode(e.target.value)}
+                        className="bg-white border border-sandstone-light/45 focus:border-[#737851] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none text-foreground cursor-pointer"
+                      >
+                        <option value="+91">🇮🇳 +91</option>
+                        <option value="+1">🇺🇸 +1</option>
+                        <option value="+44">🇬🇧 +44</option>
+                        <option value="+971">🇦🇪 +971</option>
+                        <option value="+61">🇦🇺 +61</option>
+                      </select>
+                      <div className="relative flex-grow">
+                        <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sandstone-light" />
+                        <input
+                          type="tel"
+                          value={phoneVal}
+                          onChange={(e) => setPhoneVal(e.target.value.replace(/\D/g, ""))}
+                          placeholder="94139 67929"
+                          className="w-full bg-cream-light/35 border border-sandstone-light/45 focus:border-[#737851] rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium focus:outline-none text-foreground"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

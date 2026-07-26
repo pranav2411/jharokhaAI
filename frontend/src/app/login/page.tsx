@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phoneVal, setPhoneVal] = useState("");
+  const [phoneCountryCode, setPhoneCountryCode] = useState("+91");
   const [role, setRole] = useState("customer"); // "customer" | "artisan"
   const [acceptTerms, setAcceptTerms] = useState(false);
   
@@ -41,6 +42,8 @@ export default function LoginPage() {
 
   // Modals for policy view
   const [policyType, setPolicyType] = useState<"privacy" | "terms" | null>(null);
+
+  // Google OAuth States
 
   // Google OAuth States
   const [googleClientId, setGoogleClientId] = useState(
@@ -75,17 +78,18 @@ export default function LoginPage() {
     e.preventDefault();
     resetMessages();
     setLoading(true);
+    const fullPhone = phoneCountryCode + phoneVal.trim();
     try {
       if (!otpSent) {
         // Send OTP request
-        const res = await loginPhone(phoneVal);
+        const res = await loginPhone(fullPhone);
         if (res.otpSent) {
           setOtpSent(true);
           setOtpMessage(res.message || "OTP code sent!");
         }
       } else {
         // Verify OTP code
-        const res = await loginPhone(phoneVal, otpCode);
+        const res = await loginPhone(fullPhone, otpCode);
         if (res.user) {
           setSuccessMsg(`Welcome, logged in successfully!`);
           setTimeout(() => {
@@ -164,8 +168,9 @@ export default function LoginPage() {
     }
 
     setLoading(true);
+    const fullPhone = phoneVal.trim() ? (phoneCountryCode + phoneVal.trim()) : "";
     try {
-      const user = await register(name, email, password, phoneVal, role, acceptTerms);
+      const user = await register(name, email, password, fullPhone, role, acceptTerms);
       setSuccessMsg(`Account created successfully! Welcome, ${user.name}.`);
       setTimeout(() => {
         if (user.role === "admin") {
@@ -332,17 +337,31 @@ export default function LoginPage() {
                   <form onSubmit={handlePhoneLogin} className="space-y-4">
                     <div>
                       <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">Phone Number</label>
-                      <div className="relative">
-                        <Phone className="absolute left-3.5 top-3 w-4 h-4 text-sandstone-light" />
-                        <input
-                          type="tel"
-                          required
+                      <div className="flex gap-2">
+                        <select
                           disabled={otpSent}
-                          value={phoneVal}
-                          onChange={(e) => setPhoneVal(e.target.value)}
-                          placeholder="e.g. +919876543210"
-                          className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors"
-                        />
+                          value={phoneCountryCode}
+                          onChange={(e) => setPhoneCountryCode(e.target.value)}
+                          className="bg-white border border-sandstone-light/45 focus:border-[#737851] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none text-foreground cursor-pointer"
+                        >
+                          <option value="+91">🇮🇳 +91</option>
+                          <option value="+1">🇺🇸 +1</option>
+                          <option value="+44">🇬🇧 +44</option>
+                          <option value="+971">🇦🇪 +971</option>
+                          <option value="+61">🇦🇺 +61</option>
+                        </select>
+                        <div className="relative flex-grow">
+                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sandstone-light" />
+                          <input
+                            type="tel"
+                            required
+                            disabled={otpSent}
+                            value={phoneVal}
+                            onChange={(e) => setPhoneVal(e.target.value.replace(/\D/g, ""))}
+                            placeholder="94139 67929"
+                            className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors text-foreground"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -529,15 +548,28 @@ export default function LoginPage() {
 
                 <div>
                   <label className="block text-[10px] uppercase tracking-widest text-sandstone-dark font-bold mb-1.5">Phone Number (Optional)</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3.5 top-3 w-4 h-4 text-sandstone-light" />
-                    <input
-                      type="tel"
-                      value={phoneVal}
-                      onChange={(e) => setPhoneVal(e.target.value)}
-                      placeholder="e.g. +919876543210"
-                      className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors"
-                    />
+                  <div className="flex gap-2">
+                    <select
+                      value={phoneCountryCode}
+                      onChange={(e) => setPhoneCountryCode(e.target.value)}
+                      className="bg-white border border-sandstone-light/45 focus:border-[#737851] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none text-foreground cursor-pointer"
+                    >
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+971">🇦🇪 +971</option>
+                      <option value="+61">🇦🇺 +61</option>
+                    </select>
+                    <div className="relative flex-grow">
+                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sandstone-light" />
+                      <input
+                        type="tel"
+                        value={phoneVal}
+                        onChange={(e) => setPhoneVal(e.target.value.replace(/\D/g, ""))}
+                        placeholder="94139 67929"
+                        className="w-full bg-cream-light/20 border border-sandstone-light/40 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-coral-accent transition-colors text-foreground"
+                      />
+                    </div>
                   </div>
                 </div>
 

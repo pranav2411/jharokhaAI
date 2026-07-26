@@ -72,6 +72,22 @@ import urllib.error
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
+def normalize_phone(phone_str: Optional[str]) -> Optional[str]:
+    if not phone_str:
+        return None
+    # Remove all spaces, dashes, parentheses, dots
+    cleaned = "".join(c for c in phone_str if c.isdigit() or c == "+")
+    # If it starts with +, it has a country code
+    if cleaned.startswith("+"):
+        return cleaned
+    # If it is 10 digits, assume India (+91)
+    if len(cleaned) == 10 and cleaned.isdigit():
+        return f"+91{cleaned}"
+    # If it is 12 digits starting with 91, assume India
+    if len(cleaned) == 12 and cleaned.startswith("91"):
+        return f"+{cleaned}"
+    return cleaned
+
 def verify_google_token(token: str) -> dict:
     url = f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
     try:
@@ -164,7 +180,7 @@ def register_user(req: UserRegister, session: Session = Depends(get_session)):
     db_user = models.User(
         name=req.name,
         email=req.email.strip().lower(),
-        phone=req.phone,
+        phone=normalize_phone(req.phone),
         password_hash=hash_password(req.password),
         role=role
     )
@@ -198,7 +214,7 @@ def login_user(req: UserLogin, session: Session = Depends(get_session)):
 
 @app.post("/api/auth/login-phone")
 def login_phone(req: PhoneLoginRequest, session: Session = Depends(get_session)):
-    clean_phone = req.phone.strip()
+    clean_phone = normalize_phone(req.phone)
     
     # Find user by phone
     statement = select(models.User).where(models.User.phone == clean_phone)
@@ -940,7 +956,7 @@ def create_admin(req: CreateAdminRequest, session: Session = Depends(get_session
     db_user = models.User(
         name=req.name,
         email=req.email.strip().lower(),
-        phone=req.phone,
+        phone=normalize_phone(req.phone),
         password_hash=hash_password(req.password),
         role="admin"
     )
@@ -977,7 +993,7 @@ def update_user_profile(req: UserProfileUpdate, session: Session = Depends(get_s
             
     user.name = req.name
     user.email = req.email.strip().lower()
-    user.phone = req.phone
+    user.phone = normalize_phone(req.phone)
     user.shipping_address = req.shipping_address
     if req.photo_url is not None:
         user.photo_url = req.photo_url
@@ -1094,7 +1110,7 @@ def create_callback_request(req: CallbackRequestPayload, session: Session = Depe
     db_req = models.CallbackRequest(
         user_id=req.user_id,
         user_name=req.user_name,
-        phone=req.phone,
+        phone=normalize_phone(req.phone),
         status="pending"
     )
     session.add(db_req)
