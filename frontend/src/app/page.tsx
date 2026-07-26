@@ -123,19 +123,19 @@ export default function Home() {
       {/* Hero Section */}
       <header className="relative bg-[#C99A5B] overflow-hidden text-white flex items-center min-h-[500px] py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
-          
+
           {/* Hero Left Content */}
           <div className="lg:col-span-6 space-y-6 text-left">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 py-1.5 px-3.5 rounded-full text-xs font-bold uppercase tracking-widest text-[#FAF6F0]">
               <Sparkles className="w-4 h-4 text-[#F3E9DA]" />
               Authentic Indian Craftsmanship
             </div>
-            
+
             <h1 className="font-archivo text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight leading-[1.05] text-white">
               Discover Unique Crafts.<br />
               <span className="text-cream-light font-extrabold">Empower Local Artisans.</span>
             </h1>
-            
+
             <p className="text-sm sm:text-base text-cream-light/95 leading-relaxed max-w-xl">
               Discover authentic handmade creations from talented artisans. Support local creators, explore unique crafts, and shop one-of-a-kind customizable products all in one marketplace.
             </p>
@@ -160,7 +160,7 @@ export default function Home() {
           {/* Hero Right Visuals - Matching User's Reference Collage */}
           <div className="lg:col-span-6 relative w-full h-[380px] sm:h-[450px]">
             <div className="absolute inset-0 grid grid-cols-12 grid-rows-6 gap-3 select-none pointer-events-none">
-              
+
               {/* Photo 1: Elephant Palace Entry */}
               <div className="col-span-4 row-span-3 rounded-2xl overflow-hidden shadow-md relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -208,14 +208,14 @@ export default function Home() {
             </div>
           </div>
         </div>
-        
+
         {/* Subtle Bottom Wave Accent */}
         <div className="absolute bottom-0 inset-x-0 h-8 bg-cream-light rounded-t-[32px] z-10" />
       </header>
 
       {/* Main Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        
+
         {/* Explore Collections / Category tiles */}
         <section className="mb-20">
           <div className="text-center max-w-xl mx-auto mb-12">
@@ -237,7 +237,7 @@ export default function Home() {
               >
                 {/* Decorative background Jharokha motif */}
                 <div className="absolute -right-6 -bottom-6 w-24 h-24 border border-sandstone-dark/10 rounded-full group-hover:scale-110 transition-transform opacity-30" />
-                
+
                 <h3 className="font-archivo text-base font-bold uppercase tracking-wider text-foreground mb-1">
                   {cat.name}
                 </h3>
@@ -292,8 +292,8 @@ export default function Home() {
                     prod.category_slug === "textiles"
                       ? "arched-jharokha"
                       : prod.category_slug === "pottery"
-                      ? "round-jharokha"
-                      : "default-jharokha"
+                        ? "round-jharokha"
+                        : "default-jharokha"
                   }
                 />
               ))}
@@ -326,18 +326,18 @@ export default function Home() {
               </Link>
             </div>
           </div>
-          
+
           <div className="lg:w-5/12 flex gap-4 w-full justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80"
-              alt="Riya Sen - Basket Weaver"
+              src="/sakhi_portrait.png"
+              alt="Sakhi Nag - Co-Founder"
               className="w-36 h-48 object-cover rounded-2xl border-4 border-sandstone-light/30 shadow-md rotate-[-3deg]"
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80"
-              alt="Mohan Lal - Blue Potter"
+              src="pranav.png"
+              alt="Pranav Khandelwal - Founder"
               className="w-36 h-48 object-cover rounded-2xl border-4 border-sandstone-light/30 shadow-md translate-y-6 rotate-[3deg]"
             />
           </div>
