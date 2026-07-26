@@ -9,14 +9,42 @@ def hash_password(password: str) -> str:
 def seed_data():
     init_db()
     with Session(engine) as session:
+        # 1. Create or retrieve Categories to ensure they exist
+        cat_textiles = session.exec(select(models.Category).where(models.Category.slug == "textiles")).first()
+        cat_pottery = session.exec(select(models.Category).where(models.Category.slug == "pottery")).first()
+        cat_woodwork = session.exec(select(models.Category).where(models.Category.slug == "woodwork")).first()
+        cat_metal = session.exec(select(models.Category).where(models.Category.slug == "metal")).first()
+
+        if not (cat_textiles and cat_pottery and cat_woodwork and cat_metal):
+            print("Categories missing. Seeding default categories...")
+            if not cat_textiles:
+                cat_textiles = models.Category(name="Heritage Textiles", slug="textiles", jharokha_style="arched-jharokha")
+                session.add(cat_textiles)
+            if not cat_pottery:
+                cat_pottery = models.Category(name="Khurja Pottery", slug="pottery", jharokha_style="round-jharokha")
+                session.add(cat_pottery)
+            if not cat_woodwork:
+                cat_woodwork = models.Category(name="Bamboo & Woodwork", slug="woodwork", jharokha_style="default-jharokha")
+                session.add(cat_woodwork)
+            if not cat_metal:
+                cat_metal = models.Category(name="Metal Crafts", slug="metal", jharokha_style="default-jharokha")
+                session.add(cat_metal)
+            session.commit()
+            
+            # Refresh to get IDs
+            if cat_textiles: session.refresh(cat_textiles)
+            if cat_pottery: session.refresh(cat_pottery)
+            if cat_woodwork: session.refresh(cat_woodwork)
+            if cat_metal: session.refresh(cat_metal)
+
         # Check if users already seeded
         if session.exec(select(models.User)).first():
-            print("Database already seeded.")
+            print("Database core tables (Users/Artisans) already seeded.")
             return
 
-        print("Seeding database...")
+        print("Seeding core database entities...")
 
-        # 1. Create Users
+        # 2. Create Users
         customer = models.User(
             name="Aarav Sharma",
             email="aarav@jharokha.in",
@@ -105,19 +133,6 @@ def seed_data():
         session.refresh(artisan2)
         session.refresh(artisan3)
 
-        # 3. Create Categories
-        cat_textiles = models.Category(name="Heritage Textiles", slug="textiles", jharokha_style="arched-jharokha")
-        cat_pottery = models.Category(name="Khurja Pottery", slug="pottery", jharokha_style="round-jharokha")
-        cat_woodwork = models.Category(name="Bamboo & Woodwork", slug="woodwork", jharokha_style="default-jharokha")
-        cat_metal = models.Category(name="Metal Crafts", slug="metal", jharokha_style="default-jharokha")
-
-        session.add_all([cat_textiles, cat_pottery, cat_woodwork, cat_metal])
-        session.commit()
-        
-        session.refresh(cat_textiles)
-        session.refresh(cat_pottery)
-        session.refresh(cat_woodwork)
-        session.refresh(cat_metal)
 
         # 4. Create Products and Customization Options
         
