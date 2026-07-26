@@ -13,18 +13,13 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Info Column */}
         <div className="space-y-4">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-10 flex items-center justify-center border border-[#FAF6F0] rounded-t-full bg-white/10">
-              <Landmark className="w-4 h-4 text-[#FAF6F0]" />
-            </div>
-            <div>
-              <span className="font-archivo text-lg font-black uppercase tracking-wider text-[#FAF6F0] block leading-none">
-                Jharokha
-              </span>
-              <span className="text-[8px] uppercase tracking-widest text-[#FAF6F0]/80 font-semibold block mt-0.5">
-                Heritage Marketplace
-              </span>
-            </div>
+          <Link href="/" className="flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/jharokha_logo.jpg"
+              alt="Jharokha Logo"
+              className="h-14 w-auto object-contain rounded-lg shadow-sm"
+            />
           </Link>
           <p className="text-xs text-[#FAF6F0]/70 leading-relaxed">
             Preserving India&apos;s rich cultural legacy by bringing handcrafted, custom-made creations directly from village kilns, looms, and workshops to your home.
