@@ -378,30 +378,43 @@ export default function ArtisanDashboard() {
   };
 
   const handlePhotoUpload = async (file: File) => {
-
     if (productImages.length >= 6) {
       alert("Maximum 6 photos are allowed.");
       return;
     }
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const res = await fetch(`${API_URL}/api/admin/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const absoluteUrl = data.url.startsWith("http") ? data.url : `${API_URL}${data.url}`;
-        setProductImages(prev => [...prev, absoluteUrl]);
-      } else {
-        alert("Failed to upload photo.");
-      }
-    } catch (err) {
-      console.error("Error uploading photo:", err);
-      alert("Error uploading photo.");
-    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const MAX_SIZE = 800;
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const base64Url = canvas.toDataURL("image/jpeg", 0.75);
+          setProductImages(prev => [...prev, base64Url]);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
+
 
   const handleRemovePhoto = (idxToRemove: number) => {
     setProductImages(prev => prev.filter((_, idx) => idx !== idxToRemove));
@@ -476,9 +489,38 @@ export default function ArtisanDashboard() {
         setDescription(result.description);
         setBasePrice(result.suggested_price);
         setCategory(result.category_id);
-        if (result.temp_image_url) {
-          setProductImages([`${API_URL}${result.temp_image_url}`]);
-        }
+        // Convert the suggestFile to base64 and set it as product image to prevent ephemeral url loss
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            let width = img.width;
+            let height = img.height;
+            const MAX_SIZE = 800;
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height = Math.round((height * MAX_SIZE) / width);
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width = Math.round((width * MAX_SIZE) / height);
+                height = MAX_SIZE;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const base64Url = canvas.toDataURL("image/jpeg", 0.75);
+              setProductImages([base64Url]);
+            }
+          };
+          img.src = e.target?.result as string;
+        };
+        reader.readAsDataURL(suggestFile);
         setQualityMatchReport({
           quality_rating: result.quality_rating,
           price_fairness: result.price_fairness,
