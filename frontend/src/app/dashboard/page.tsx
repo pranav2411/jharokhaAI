@@ -573,6 +573,26 @@ export default function ArtisanDashboard() {
     }
   };
 
+  const handleUpdateOrderStatus = async (orderId: number, nextStatus: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/orders/${orderId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus })
+      });
+
+      if (res.ok) {
+        loadOrders();
+        alert(`Order status updated successfully to ${nextStatus}!`);
+      } else {
+        alert("Failed to update order status.");
+      }
+    } catch (err) {
+      console.error("Order status update error:", err);
+      alert("Error updating order status.");
+    }
+  };
+
   const handleCopyText = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
@@ -1326,11 +1346,13 @@ export default function ArtisanDashboard() {
                           <span className="text-xs font-archivo font-extrabold uppercase text-sandstone-dark bg-cream-dark/50 px-2 py-0.5 rounded-md">Order #{ord.id}</span>
                           <span className={`text-[8px] font-archivo font-extrabold uppercase px-2 py-0.5 rounded-full ${
                             ord.status === "ready_for_pickup" ? "bg-amber-100 text-amber-800" :
+                            ord.status === "weaving" ? "bg-purple-100 text-purple-800" :
                             ord.status === "out_for_delivery" ? "bg-blue-100 text-blue-800" :
                             ord.status === "delivered" ? "bg-emerald-100 text-emerald-800" : "bg-zinc-100 text-zinc-800"
                           }`}>
                             {ord.status.replace(/_/g, ' ')}
                           </span>
+
                         </div>
 
                         <div className="space-y-1">
@@ -1349,16 +1371,26 @@ export default function ArtisanDashboard() {
                         </p>
                       </div>
 
-                      <div className="flex flex-col justify-between items-end shrink-0">
+                      <div className="flex flex-col justify-between items-end shrink-0 gap-2">
                         <span className="text-sm font-archivo font-black text-sandstone-dark">₹{ord.total.toLocaleString("en-IN")}</span>
                         
-                        {ord.status === "paid" && (
-                          <button
-                            onClick={() => handleMarkReadyForPickup(ord.id)}
-                            className="bg-coral-accent hover:bg-coral-accent/80 text-white text-[9px] font-archivo font-extrabold uppercase py-2 px-3 rounded-lg transition-all shadow"
-                          >
-                            Mark Ready for Pickup
-                          </button>
+                        {(ord.status === "pending" || ord.status === "paid" || ord.status === "weaving") && (
+                          <div className="flex gap-2">
+                            {(ord.status === "pending" || ord.status === "paid") && (
+                              <button
+                                onClick={() => handleUpdateOrderStatus(ord.id, "weaving")}
+                                className="bg-sandstone-dark/10 hover:bg-sandstone-dark text-sandstone-dark hover:text-white text-[9px] font-archivo font-extrabold uppercase py-2 px-3 rounded-lg transition-all cursor-pointer"
+                              >
+                                Start Weaving
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleMarkReadyForPickup(ord.id)}
+                              className="bg-coral-accent hover:bg-coral-accent/80 text-white text-[9px] font-archivo font-extrabold uppercase py-2 px-3 rounded-lg transition-all shadow cursor-pointer"
+                            >
+                              Mark Ready for Pickup
+                            </button>
+                          </div>
                         )}
                         {ord.status === "ready_for_pickup" && (
                           <span className="text-[8px] font-bold text-amber-700 bg-amber-50 border border-amber-200/50 p-1.5 rounded-md text-center max-w-[130px] leading-tight">
@@ -1366,6 +1398,7 @@ export default function ArtisanDashboard() {
                           </span>
                         )}
                       </div>
+
                     </div>
                   ))}
                 </div>
