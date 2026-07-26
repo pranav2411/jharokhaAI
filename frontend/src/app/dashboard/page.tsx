@@ -686,30 +686,32 @@ export default function ArtisanDashboard() {
     }
   };
 
-  const handleSendEmail = () => {
-    setSendingEmail(true);
-    setTimeout(() => {
-      setSendingEmail(false);
-      setEmailSent(true);
-    }, 1800);
+  const handlePublishInstagram = () => {
+    if (!marketingKit?.instagram_post) return;
+    navigator.clipboard.writeText(marketingKit.instagram_post);
+    window.open("https://www.instagram.com/", "_blank");
+    alert("Instagram caption copied to clipboard! Opening Instagram so you can upload your image and paste the caption.");
   };
 
-  const handlePublishSocial = () => {
-    setPublishingSocial(true);
-    setTimeout(() => {
-      setPublishingSocial(false);
-      setSocialPublished(true);
-    }, 1800);
+  const handlePublishFacebook = () => {
+    if (!marketingKit?.facebook_post) return;
+    navigator.clipboard.writeText(marketingKit.facebook_post);
+    window.open("https://www.facebook.com/", "_blank");
+    alert("Facebook post text copied to clipboard! Opening Facebook so you can paste and share.");
   };
 
-  const handleLaunchAd = () => {
-    setLaunchingAd(true);
-    setTimeout(() => {
-      setLaunchingAd(false);
-      setAdLaunched(true);
-      setAdImpressions(Math.floor(Math.random() * 800) + 1200);
-      setAdClicks(Math.floor(Math.random() * 60) + 90);
-    }, 1800);
+  const handleSendEmailClient = () => {
+    if (!marketingKit?.newsletter_subject || !marketingKit?.newsletter_body) return;
+    const subject = encodeURIComponent(marketingKit.newsletter_subject);
+    const body = encodeURIComponent(marketingKit.newsletter_body);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  const handleLaunchGoogleAds = () => {
+    if (!marketingKit?.search_ad_copy) return;
+    navigator.clipboard.writeText(marketingKit.search_ad_copy);
+    window.open("https://ads.google.com/aw/campaigns/new", "_blank");
+    alert("Google Search Ad copy copied to clipboard! Opening Google Ads campaign builder so you can paste and launch.");
   };
 
   // Mark order ready for pickup and dispatch notification to admin
@@ -1893,11 +1895,10 @@ export default function ArtisanDashboard() {
                           {copiedKey === 'insta' ? 'Copied' : 'Copy'}
                         </button>
                         <button 
-                          onClick={handlePublishSocial}
-                          disabled={publishingSocial || socialPublished}
-                          className="text-[9px] font-archivo font-black text-white bg-coral-accent hover:bg-coral-dark py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all disabled:bg-emerald-600 disabled:cursor-not-allowed"
+                          onClick={handlePublishInstagram}
+                          className="text-[9px] font-archivo font-black text-white bg-coral-accent hover:bg-coral-dark py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all"
                         >
-                          {publishingSocial ? "Publishing..." : socialPublished ? "✓ Published on Meta" : "🌐 Post to Meta"}
+                          🌐 Post on Instagram
                         </button>
                       </div>
                     </div>
@@ -1919,11 +1920,10 @@ export default function ArtisanDashboard() {
                           {copiedKey === 'fb' ? 'Copied' : 'Copy'}
                         </button>
                         <button 
-                          onClick={handlePublishSocial}
-                          disabled={publishingSocial || socialPublished}
-                          className="text-[9px] font-archivo font-black text-white bg-coral-accent hover:bg-coral-dark py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all disabled:bg-emerald-600 disabled:cursor-not-allowed"
+                          onClick={handlePublishFacebook}
+                          className="text-[9px] font-archivo font-black text-white bg-coral-accent hover:bg-coral-dark py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all"
                         >
-                          {publishingSocial ? "Publishing..." : socialPublished ? "✓ Published on Meta" : "🌐 Post to Meta"}
+                          🌐 Post on Facebook
                         </button>
                       </div>
                     </div>
@@ -1945,11 +1945,10 @@ export default function ArtisanDashboard() {
                           {copiedKey === 'email' ? 'Copied' : 'Copy'}
                         </button>
                         <button 
-                          onClick={handleSendEmail}
-                          disabled={sendingEmail || emailSent}
-                          className="text-[9px] font-archivo font-black text-white bg-[#43472E] hover:bg-[#6c7249] py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all disabled:bg-emerald-600 disabled:cursor-not-allowed"
+                          onClick={handleSendEmailClient}
+                          className="text-[9px] font-archivo font-black text-white bg-[#43472E] hover:bg-[#6c7249] py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all"
                         >
-                          {sendingEmail ? "Delivering..." : emailSent ? "✓ Sent to 1,248 Customers" : "📧 Send Newsletter"}
+                          📧 Send via Email Client
                         </button>
                       </div>
                     </div>
@@ -1974,34 +1973,16 @@ export default function ArtisanDashboard() {
                           {copiedKey === 'ad' ? 'Copied' : 'Copy'}
                         </button>
                         <button 
-                          onClick={handleLaunchAd}
-                          disabled={launchingAd || adLaunched}
-                          className="text-[9px] font-archivo font-black text-white bg-blue-600 hover:bg-blue-800 py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all disabled:bg-emerald-600 disabled:cursor-not-allowed"
+                          onClick={handleLaunchGoogleAds}
+                          className="text-[9px] font-archivo font-black text-white bg-blue-600 hover:bg-blue-800 py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all"
                         >
-                          {launchingAd ? "Launching..." : adLaunched ? "✓ Campaign Active" : "🚀 Launch Google Ad"}
+                          🚀 Launch Google Ads Campaign
                         </button>
                       </div>
                     </div>
                     <p className="text-xs font-medium font-mono text-foreground/80 leading-relaxed whitespace-pre-wrap">
                       {marketingKit.search_ad_copy}
                     </p>
-
-                    {adLaunched && (
-                      <div className="mt-3 pt-3 border-t border-sandstone-light/10 grid grid-cols-3 gap-2 bg-blue-50/50 p-2.5 rounded-xl border border-blue-100/50">
-                        <div className="text-center">
-                          <p className="text-[8px] uppercase tracking-wider text-blue-800 font-bold">Impressions</p>
-                          <p className="text-sm font-archivo font-black text-blue-900">{adImpressions}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[8px] uppercase tracking-wider text-blue-800 font-bold">Ad Clicks</p>
-                          <p className="text-sm font-archivo font-black text-blue-900">{adClicks}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[8px] uppercase tracking-wider text-blue-800 font-bold">Ad Status</p>
-                          <p className="text-[10px] font-bold text-emerald-600 mt-1 uppercase tracking-wide">Live</p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               ) : (
