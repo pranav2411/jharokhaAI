@@ -343,6 +343,16 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
         const res = await fetch(`${API_URL}/api/products/${productId}`);
         if (res.ok) {
           const data = await res.json();
+          let imgs = data.images;
+          if (typeof imgs === "string") {
+            try {
+              imgs = JSON.parse(imgs);
+            } catch (e) {
+              imgs = [];
+            }
+          }
+          data.images = Array.isArray(imgs) ? imgs : [];
+          
           setProduct(data);
           setReviewsList(data.reviews || []);
           setSelectedImage(data.images[0]);
@@ -368,6 +378,16 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
 
     function loadFallback() {
       const fb = MOCK_PRODUCTS[productId] || MOCK_PRODUCTS[1];
+      let imgs = fb.images;
+      if (typeof imgs === "string") {
+        try {
+          imgs = JSON.parse(imgs);
+        } catch (e) {
+          imgs = [];
+        }
+      }
+      fb.images = Array.isArray(imgs) ? imgs : [];
+
       setProduct(fb);
       setReviewsList(fb.reviews || []);
       setSelectedImage(fb.images[0]);
@@ -383,6 +403,49 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
 
     getDetails();
   }, [productId]);
+
+  // Synchronize selectedImage based on current customization selections
+  useEffect(() => {
+    if (!product || !product.images || product.images.length === 0) return;
+
+    // 1. Find selected color swatch name
+    const colorOpt = product.customization_options?.find((o: any) => 
+      o.option_type === "color_swatch" || 
+      o.option_name.toLowerCase().includes("glaze") || 
+      o.option_name.toLowerCase().includes("color")
+    );
+    if (!colorOpt) return;
+
+    const selectedVal = selections[colorOpt.option_name];
+    if (!selectedVal) return;
+    
+    const selectedColorName = typeof selectedVal === "object" ? selectedVal.name : selectedVal;
+    if (!selectedColorName) return;
+
+    // 2. Search images by keyword
+    const cleanColor = selectedColorName.toLowerCase().replace(/[^a-z]/g, "");
+    const matchedImg = product.images.find((img: string) => {
+      const imgLower = img.toLowerCase();
+      if (cleanColor.includes("blue") && (imgLower.includes("blue") || imgLower.includes("cobalt"))) return true;
+      if (cleanColor.includes("saffron") && (imgLower.includes("saffron") || imgLower.includes("amber") || imgLower.includes("yellow"))) return true;
+      if (cleanColor.includes("olive") && (imgLower.includes("olive") || imgLower.includes("green") || imgLower.includes("forest"))) return true;
+      return false;
+    });
+
+    if (matchedImg) {
+      setSelectedImage(matchedImg);
+    } else {
+      // 3. Fallback to index mapping
+      const choiceIdx = colorOpt.choices.findIndex((c: any) => {
+        const cName = typeof c === "object" ? c.name : c;
+        return cName === selectedColorName;
+      });
+      if (choiceIdx !== -1 && product.images[choiceIdx]) {
+        setSelectedImage(product.images[choiceIdx]);
+      }
+    }
+  }, [selections, product]);
+
 
   if (loading) {
     return (

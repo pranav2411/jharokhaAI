@@ -591,6 +591,50 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
     return renderFallback();
   };
 
+  // Find the active selected color name and code
+  const selectedColorName = colorSelections[0]?.name || "";
+  const selectedColorCode = colorSelections[0]?.color || "";
+
+  // Dynamic Image Swapping Algorithm
+  let activeImage = product.images?.[0] || "";
+  
+  if (product.images && product.images.length > 0) {
+    let foundMatch = false;
+    if (selectedColorName) {
+      const cleanColor = selectedColorName.toLowerCase().replace(/[^a-z]/g, "");
+      const matchedImg = product.images.find(img => {
+        const imgLower = img.toLowerCase();
+        if (cleanColor.includes("blue") && (imgLower.includes("blue") || imgLower.includes("cobalt"))) return true;
+        if (cleanColor.includes("saffron") && (imgLower.includes("saffron") || imgLower.includes("amber") || imgLower.includes("yellow"))) return true;
+        if (cleanColor.includes("olive") && (imgLower.includes("olive") || imgLower.includes("green") || imgLower.includes("forest"))) return true;
+        return false;
+      });
+      if (matchedImg) {
+        activeImage = matchedImg;
+        foundMatch = true;
+      }
+    }
+    
+    if (!foundMatch) {
+      const colorOpt = product.customization_options?.find(o => 
+        o.option_type === "color_swatch" || 
+        o.option_name.toLowerCase().includes("glaze") || 
+        o.option_name.toLowerCase().includes("color")
+      );
+      if (colorOpt) {
+        const selectedVal = selections[colorOpt.option_name];
+        const selectedName = typeof selectedVal === "object" ? selectedVal.name : selectedVal;
+        const choiceIdx = colorOpt.choices.findIndex((c: any) => {
+          const cName = typeof c === "object" ? c.name : c;
+          return cName === selectedName;
+        });
+        if (choiceIdx !== -1 && product.images[choiceIdx]) {
+          activeImage = product.images[choiceIdx];
+        }
+      }
+    }
+  }
+
   return (
     <div className="w-full flex flex-col items-center">
       {/* Toggle View Mode */}
@@ -622,14 +666,22 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
           <div className="bg-cream-dark/30 border border-sandstone-light/15 rounded-3xl overflow-hidden aspect-square relative shadow-md">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={product.images?.[0] || "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80"}
+              src={activeImage || "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80"}
               alt={product.title}
               onError={(e) => {
                 e.currentTarget.src = "https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&auto=format&fit=crop&q=80";
               }}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-all duration-500"
             />
+            {/* Dynamic Custom Color Tint Overlay */}
+            {selectedColorCode && (
+              <div 
+                className="absolute inset-0 pointer-events-none mix-blend-color opacity-25 transition-all duration-500" 
+                style={{ backgroundColor: selectedColorCode }} 
+              />
+            )}
             {/* Custom options glassmorphic badge grid */}
+
             <div className="absolute bottom-4 left-4 right-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 p-3 shadow space-y-1.5 text-left">
               <span className="text-[8px] font-archivo font-black uppercase tracking-wider text-sandstone-dark block">
                 Active Configurations Overlay
