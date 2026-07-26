@@ -26,13 +26,23 @@ export const Navbar: React.FC = () => {
         <div className="flex justify-between h-20 items-center">
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
-            <Link href="/" className="flex items-center group">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/jharokha_logo.jpg"
-                alt="Jharokha Logo"
-                className="h-16 w-auto object-contain transition-transform group-hover:scale-[1.02]"
-              />
+            <Link href="/" className="flex items-center space-x-2 group">
+              <div className="relative w-12 h-12 flex items-center justify-center border border-sandstone-light/35 rounded-xl bg-white overflow-hidden transition-transform group-hover:scale-105 shadow-sm p-0.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/jharokha_logo.jpg"
+                  alt="Jharokha Logo"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div>
+                <span className="font-archivo text-xl sm:text-2xl font-black uppercase tracking-wider text-sandstone-dark block leading-none">
+                  Jharokha
+                </span>
+                <span className="text-[9px] uppercase tracking-widest text-olive-dark font-semibold block mt-0.5">
+                  Artisan Marketplace
+                </span>
+              </div>
             </Link>
           </div>
 
