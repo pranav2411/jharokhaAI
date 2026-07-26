@@ -19,7 +19,8 @@ import {
   Megaphone, 
   Copy, 
   Check,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from "lucide-react";
 import { API_URL } from "@/config";
 
@@ -303,6 +304,23 @@ export default function ArtisanDashboard() {
       console.error("Error generating description:", err);
     } finally {
       setGeneratingDesc(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this creation?")) return;
+    try {
+      const res = await fetch(`${API_URL}/api/admin/products/${id}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        loadData();
+      } else {
+        alert("Failed to delete creation.");
+      }
+    } catch (err) {
+      console.error("Error deleting creation:", err);
+      alert("Error deleting creation.");
     }
   };
 
@@ -1332,14 +1350,24 @@ export default function ArtisanDashboard() {
                       {/* Marketing Panel Toggle */}
                       <div className="border-t border-sandstone-light/10 pt-3 flex items-center justify-between">
                         <span className="text-[9px] text-foreground/40 font-medium">Auto-generated tags verified</span>
-                        <button
-                          type="button"
-                          onClick={() => handleGenerateMarketing(p)}
-                          className="bg-sandstone-dark/10 hover:bg-coral-accent text-sandstone-dark hover:text-white text-[9px] font-archivo font-extrabold uppercase py-1.5 px-3 rounded-lg transition-all flex items-center gap-1"
-                        >
-                          <Megaphone className="w-3.5 h-3.5" /> AI Marketing Kit
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProduct(p.id)}
+                            className="bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white text-[9px] font-archivo font-extrabold uppercase py-1.5 px-3 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateMarketing(p)}
+                            className="bg-sandstone-dark/10 hover:bg-coral-accent text-sandstone-dark hover:text-white text-[9px] font-archivo font-extrabold uppercase py-1.5 px-3 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <Megaphone className="w-3.5 h-3.5" /> AI Marketing Kit
+                          </button>
+                        </div>
                       </div>
+
                     </div>
                   ))}
                 </div>
