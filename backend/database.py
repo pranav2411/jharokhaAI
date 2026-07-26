@@ -14,19 +14,19 @@ engine = create_engine(DATABASE_URL, echo=True, connect_args=connect_args)
 
 def init_db():
     SQLModel.metadata.create_all(engine)
-    # Check if photo_url exists in user table, if not, add it
-    from sqlalchemy import text
-    with Session(engine) as session:
-        try:
-            # check columns in user table
-            res = session.execute(text("PRAGMA table_info(user)")).fetchall()
-            cols = [r[1] for r in res]
-            if "photo_url" not in cols:
-                print("Migrating User table to add photo_url...")
-                session.execute(text("ALTER TABLE user ADD COLUMN photo_url TEXT"))
+    # Check if photo_url exists in user table, if not, add it in a database-agnostic way
+    from sqlalchemy import inspect, text
+    try:
+        inspector = inspect(engine)
+        columns = [c["name"] for c in inspector.get_columns("user")]
+        if "photo_url" not in columns:
+            print("Migrating User table to add photo_url...")
+            with Session(engine) as session:
+                session.execute(text('ALTER TABLE "user" ADD COLUMN photo_url TEXT'))
                 session.commit()
-        except Exception as e:
-            print(f"Migration error: {e}")
+                print("User table migration completed successfully.")
+    except Exception as e:
+        print(f"Migration error: {e}")
 
 def get_session():
     with Session(engine) as session:
