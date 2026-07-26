@@ -56,10 +56,10 @@ export default function ProductStudio({ product, selections, textInputs }: Produ
     .filter(([_, val]) => val && (typeof val === "string" || !("color" in val)))
     .map(([key, val]) => ({
       optionName: key,
-      choiceName: typeof val === "object" ? val.name : val
+      choiceName: typeof val === "object" ? (val.name || val.value || "") : val
     }));
 
-  const allChoicesString = selectSelections.map(s => s.choiceName.toLowerCase()).join(" ");
+  const allChoicesString = selectSelections.map(s => String(s.choiceName || "").toLowerCase()).join(" ");
 
   const handleAiAnalysis = async () => {
     setAnalyzing(true);
