@@ -4,12 +4,14 @@ import React, { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
-import { Settings, User, Mail, Phone, MapPin, Lock, ShieldCheck, AlertCircle, Save } from "lucide-react";
+import { Settings, User, Mail, Phone, MapPin, Lock, ShieldCheck, AlertCircle, Save, Trash2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { API_URL } from "@/config";
 
 export default function SettingsPage() {
-  const { currentUser, loading: authLoading, updateCurrentUser } = useAuth();
+  const { currentUser, loading: authLoading, updateCurrentUser, logout } = useAuth();
+  const router = useRouter();
   
   // Profile form states
   const [name, setName] = useState("");
@@ -19,9 +21,39 @@ export default function SettingsPage() {
   const [photoUrl, setPhotoUrl] = useState("");
   const [password, setPassword] = useState("");
   
+  // Deletion states
+  const [deleteConfirmStep, setDeleteConfirmStep] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   // Feedback states
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  const handleDeleteAccount = async () => {
+    if (!currentUser) return;
+    setIsDeleting(true);
+    setFeedback(null);
+
+    try {
+      const res = await fetch(`${API_URL}/api/users/${currentUser.id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        logout();
+        router.push("/");
+      } else {
+        const err = await res.json();
+        setFeedback({ type: "error", msg: err.detail || "Failed to delete account." });
+        setDeleteConfirmStep(0);
+      }
+    } catch (err) {
+      setFeedback({ type: "error", msg: "A network error occurred. Please try again." });
+      setDeleteConfirmStep(0);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Pre-fill user data
   useEffect(() => {
@@ -305,6 +337,79 @@ export default function SettingsPage() {
               </div>
 
             </form>
+
+            {/* Danger Zone: Delete Account */}
+            <div className="mt-10 pt-6 border-t border-red-200/40">
+              <h3 className="font-archivo text-xs uppercase tracking-wider font-extrabold text-red-600 flex items-center gap-1.5 mb-2">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                Danger Zone
+              </h3>
+              <p className="text-[10px] text-foreground/50 leading-relaxed mb-4">
+                Permanently delete your Jharokha account and wipe all your order details, customizations, and settings. This action is irreversible.
+              </p>
+              
+              {deleteConfirmStep === 0 && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmStep(1)}
+                  className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-archivo text-[10px] font-extrabold uppercase px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Account
+                </button>
+              )}
+
+              {deleteConfirmStep === 1 && (
+                <div className="bg-red-50/50 border border-red-200/60 p-4 rounded-2xl space-y-3 animate-fade-in-up">
+                  <p className="text-xs font-semibold text-red-700">
+                    Are you sure you want to delete your account?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmStep(2)}
+                      className="bg-red-600 hover:bg-red-700 text-white font-archivo text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all cursor-pointer"
+                    >
+                      Yes, proceed
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmStep(0)}
+                      className="bg-white border border-sandstone-light/40 hover:bg-cream-light text-foreground font-archivo text-[9px] font-extrabold uppercase px-4 py-2 rounded-xl transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {deleteConfirmStep === 2 && (
+                <div className="bg-red-100 border border-red-300 p-4 rounded-2xl space-y-3 animate-pulse">
+                  <p className="text-xs font-bold text-red-800 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-red-600 animate-bounce" />
+                    This cannot be undone. Are you absolutely sure you want to delete?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                      className="bg-red-700 hover:bg-red-800 text-white font-archivo text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {isDeleting ? "Deleting..." : "Yes, Delete Permanently"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmStep(0)}
+                      disabled={isDeleting}
+                      className="bg-white border border-sandstone-light/40 hover:bg-cream-light text-foreground font-archivo text-[9px] font-extrabold uppercase px-4 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>

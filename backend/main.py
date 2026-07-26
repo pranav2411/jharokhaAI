@@ -989,6 +989,60 @@ def update_user_profile(req: UserProfileUpdate, session: Session = Depends(get_s
     session.refresh(user)
     return user
 
+@app.delete("/api/users/{user_id}")
+def delete_user(user_id: int, session: Session = Depends(get_session)):
+    user = session.get(models.User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # 1. Delete all reviews written by this user
+    reviews = session.exec(select(models.Review).where(models.Review.user_id == user_id)).all()
+    for rev in reviews:
+        session.delete(rev)
+        
+    # 2. Delete all callback requests for this user
+    callbacks = session.exec(select(models.CallbackRequest).where(models.CallbackRequest.user_id == user_id)).all()
+    for cb in callbacks:
+        session.delete(cb)
+
+    # 3. Delete all cart items of this user
+    cart_items = session.exec(select(models.CartItem).where(models.CartItem.user_id == user_id)).all()
+    for item in cart_items:
+        session.delete(item)
+
+    # 4. Delete all orders (and cascade order items) of this user
+    orders = session.exec(select(models.Order).where(models.Order.user_id == user_id)).all()
+    for order in orders:
+        items = session.exec(select(models.OrderItem).where(models.OrderItem.order_id == order.id)).all()
+        for item in items:
+            session.delete(item)
+        session.delete(order)
+
+    # 5. If this is an artisan user, delete their artisan profile, products, etc.
+    artisan = session.exec(select(models.Artisan).where(models.Artisan.user_id == user_id)).first()
+    if artisan:
+        products = session.exec(select(models.Product).where(models.Product.artisan_id == artisan.id)).all()
+        for prod in products:
+            opts = session.exec(select(models.CustomizationOption).where(models.CustomizationOption.product_id == prod.id)).all()
+            for opt in opts:
+                session.delete(opt)
+            revs = session.exec(select(models.Review).where(models.Review.product_id == prod.id)).all()
+            for rev in revs:
+                session.delete(rev)
+            order_items = session.exec(select(models.OrderItem).where(models.OrderItem.product_id == prod.id)).all()
+            for item in order_items:
+                session.delete(item)
+            cart_prods = session.exec(select(models.CartItem).where(models.CartItem.product_id == prod.id)).all()
+            for cp in cart_prods:
+                session.delete(cp)
+            session.delete(prod)
+        session.delete(artisan)
+
+    # 6. Finally delete the user
+    session.delete(user)
+    session.commit()
+    return {"success": True, "message": "Account and all associated data deleted successfully."}
+
 @app.put("/api/artisans/profile", response_model=models.Artisan)
 def update_artisan_profile(req: ArtisanProfileUpdate, session: Session = Depends(get_session)):
     artisan = session.get(models.Artisan, req.artisan_id)
