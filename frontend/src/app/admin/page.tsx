@@ -558,14 +558,14 @@ export default function AdminPortal() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`w-full flex items-center gap-3 py-3 px-4 rounded-xl text-xs font-archivo font-extrabold uppercase tracking-wider transition-all border ${
+              className={`w-full flex items-center gap-3 h-[52px] px-4 rounded-xl text-[10px] font-archivo font-extrabold uppercase tracking-wider transition-all border text-left leading-tight ${
                 activeTab === tab.id
                   ? "bg-sandstone-dark border-sandstone-dark text-white shadow-sm"
                   : "text-foreground/70 bg-cream-light/45 border-transparent hover:bg-sandstone-light/10"
               }`}
             >
-              {tab.icon}
-              {tab.label}
+              <span className="flex-shrink-0 text-foreground/80 group-hover:text-foreground">{tab.icon}</span>
+              <span className="block">{tab.label}</span>
             </button>
           ))}
         </aside>
