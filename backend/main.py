@@ -318,7 +318,7 @@ def get_artisan(artisan_id: int, session: Session = Depends(get_session)):
         "craft_type": artisan.craft_type,
         "city": artisan.city,
         "rating": artisan.rating,
-        "photo_url": artisan.photo_url,
+        "photo_url": user.photo_url or artisan.photo_url if user else artisan.photo_url,
         "is_verified": artisan.is_verified,
         "user": user,
         "products": products
@@ -523,7 +523,7 @@ def get_product(product_id: int, session: Session = Depends(get_session)):
             "craft_type": artisan.craft_type if artisan else "",
             "city": artisan.city if artisan else "",
             "rating": artisan.rating if artisan else 5.0,
-            "photo_url": artisan.photo_url if artisan else None,
+            "photo_url": (artisan_user.photo_url or artisan.photo_url) if artisan_user and artisan else (artisan.photo_url if artisan else None),
             "is_verified": artisan.is_verified if artisan else False
         },
         "category": {
