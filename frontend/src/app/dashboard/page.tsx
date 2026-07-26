@@ -3,21 +3,21 @@
 import React, { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { 
-  Settings, 
-  Plus, 
-  LayoutDashboard, 
-  FileText, 
-  CheckCircle2, 
-  AlertCircle, 
-  ShoppingBag, 
-  Sparkles, 
-  Upload, 
-  ShieldAlert, 
-  ShieldCheck, 
-  Terminal, 
-  Megaphone, 
-  Copy, 
+import {
+  Settings,
+  Plus,
+  LayoutDashboard,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  ShoppingBag,
+  Sparkles,
+  Upload,
+  ShieldAlert,
+  ShieldCheck,
+  Terminal,
+  Megaphone,
+  Copy,
   Check,
   RefreshCw,
   Trash2
@@ -108,7 +108,7 @@ export default function ArtisanDashboard() {
   const [customizationOptions, setCustomizationOptions] = useState<any[]>([]);
   const [newOptLabel, setNewOptLabel] = useState("");
   const [newOptType, setNewOptType] = useState("color_swatch"); // select, color_swatch, text
-  
+
   // Custom Choices Builder State
   const [newChoices, setNewChoices] = useState<any[]>([]);
   const [choiceName, setChoiceName] = useState("");
@@ -160,7 +160,7 @@ export default function ArtisanDashboard() {
         });
         setProducts(parsedProducts);
       }
-      
+
       // Load artisan details
       const artRes = await fetch(`${API_URL}/api/artisans/1`);
       if (artRes.ok) {
@@ -369,10 +369,10 @@ export default function ArtisanDashboard() {
     setCategory(p.category_id || 2);
     setIsCustomizable(p.is_customizable);
     setProductImages(p.images || []);
-    
+
     setCompiledPricingFormula(p.pricing_formula || "");
     setCustomizationOptions(p.customization_options || []);
-    
+
     const formEl = document.getElementById("add-creation-form");
     if (formEl) {
       formEl.scrollIntoView({ behavior: "smooth" });
@@ -420,7 +420,7 @@ export default function ArtisanDashboard() {
       alert("Please enter an option name.");
       return;
     }
-    
+
     if (customizationOptions.some(o => o.option_name.toLowerCase() === newOptLabel.toLowerCase().trim())) {
       alert("An option with this name already exists.");
       return;
@@ -450,7 +450,7 @@ export default function ArtisanDashboard() {
         price_delta: 0.0
       }
     ]);
-    
+
     // Reset inputs
     setNewOptLabel("");
     setNewChoices([]);
@@ -776,7 +776,7 @@ export default function ArtisanDashboard() {
     };
 
     try {
-      const url = editingProduct 
+      const url = editingProduct
         ? `${API_URL}/api/admin/products/${editingProduct.id}`
         : `${API_URL}/api/products`;
       const method = editingProduct ? "PUT" : "POST";
@@ -811,7 +811,7 @@ export default function ArtisanDashboard() {
   };
 
   // Filter orders for this specific artisan (artisan ID = 1)
-  const myOrders = orders.filter((o: any) => 
+  const myOrders = orders.filter((o: any) =>
     o.items?.some((it: any) => it.artisan_id === 1)
   );
 
@@ -823,7 +823,7 @@ export default function ArtisanDashboard() {
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-grow text-left">
-        
+
         {/* Verification Status Banner */}
         <div className="mb-8">
           {artisanVerified ? (
@@ -1035,7 +1035,7 @@ export default function ArtisanDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Left Column: Create/Edit Listing Form */}
           <section id="add-creation-form" className="lg:col-span-5 bg-cream-dark/30 border border-sandstone-light/15 rounded-3xl p-6 space-y-6">
             <h3 className="font-archivo text-base uppercase font-bold tracking-wider text-foreground flex items-center gap-1.5 border-b border-sandstone-light/20 pb-3">
@@ -1059,7 +1059,7 @@ export default function ArtisanDashboard() {
                 <Sparkles className="w-3.5 h-3.5 text-coral-accent" />
                 AI Listing Enhancer
               </h4>
-              
+
               <p className="text-[9px] text-foreground/50 leading-relaxed">
                 Upload your product photo, enter key terms, and let Gemini compile descriptions, quality ratings, and fair pricing verification.
               </p>
@@ -1076,10 +1076,10 @@ export default function ArtisanDashboard() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Listing Price (₹)</label>
-                    <input 
-                      type="number" 
-                      value={suggestPriceInput} 
-                      onChange={(e) => setSuggestPriceInput(Number(e.target.value))} 
+                    <input
+                      type="number"
+                      value={suggestPriceInput}
+                      onChange={(e) => setSuggestPriceInput(Number(e.target.value))}
                       className="w-full bg-cream-light border border-sandstone-light/35 rounded-xl py-1.5 px-3 text-[10px] font-semibold focus:outline-none focus:border-sandstone-dark"
                     />
                   </div>
@@ -1087,11 +1087,11 @@ export default function ArtisanDashboard() {
 
                 <div className="space-y-1">
                   <label className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Simple Tags / Description</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     placeholder="e.g. blue glazed terracotta vase, 12 inches"
-                    value={suggestInputText} 
-                    onChange={(e) => setSuggestInputText(e.target.value)} 
+                    value={suggestInputText}
+                    onChange={(e) => setSuggestInputText(e.target.value)}
                     className="w-full bg-cream-light border border-sandstone-light/35 rounded-xl py-1.5 px-3 text-[10px] font-semibold focus:outline-none focus:border-sandstone-dark"
                   />
                 </div>
@@ -1121,13 +1121,12 @@ export default function ArtisanDashboard() {
                     <span className="text-[9px] uppercase font-bold text-sandstone-dark">Quality Score:</span>
                     <span className="text-[10px] font-black text-coral-accent">{qualityMatchReport.quality_rating} / 5.0</span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between border-b border-sandstone-light/10 pb-1.5">
                     <span className="text-[9px] uppercase font-bold text-sandstone-dark">Pricing Check:</span>
-                    <span className={`text-[10px] uppercase font-archivo font-black px-2 py-0.5 rounded-full ${
-                      qualityMatchReport.price_fairness === "Fair" ? "bg-emerald-50 text-emerald-700" :
-                      qualityMatchReport.price_fairness === "Overpriced" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"
-                    }`}>
+                    <span className={`text-[10px] uppercase font-archivo font-black px-2 py-0.5 rounded-full ${qualityMatchReport.price_fairness === "Fair" ? "bg-emerald-50 text-emerald-700" :
+                        qualityMatchReport.price_fairness === "Overpriced" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"
+                      }`}>
                       {qualityMatchReport.price_fairness}
                     </span>
                   </div>
@@ -1168,7 +1167,7 @@ export default function ArtisanDashboard() {
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Description Summary</label>
-                
+
                 {/* AI Description Writer section */}
                 <div className="bg-cream-light/40 border border-sandstone-light/20 p-3.5 rounded-2xl space-y-2 mb-2 text-left">
                   <span className="text-[9px] font-archivo font-black uppercase tracking-wider text-sandstone-dark block">AI Product Writer</span>
@@ -1245,7 +1244,7 @@ export default function ArtisanDashboard() {
                   <label className="text-[10px] font-bold uppercase tracking-wider text-olive-dark block">Product Photographs (Up to 6)</label>
                   <span className="text-[9px] font-bold text-foreground/50">{productImages.length}/6 Uploaded</span>
                 </div>
-                
+
                 <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
                   {productImages.map((imgUrl, idx) => (
                     <div key={idx} className="relative group aspect-square rounded-2xl overflow-hidden border border-sandstone-light/20 bg-cream-dark/10 shadow-sm">
@@ -1329,7 +1328,7 @@ export default function ArtisanDashboard() {
                   <h4 className="text-[10px] uppercase font-archivo font-extrabold tracking-widest text-coral-accent">
                     Custom Options Builder
                   </h4>
-                  
+
                   {customizationOptions.length > 0 && (
                     <div className="space-y-2 border-b border-sandstone-light/10 pb-3.5 text-left">
                       <p className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Configured Options:</p>
@@ -1361,7 +1360,7 @@ export default function ArtisanDashboard() {
                         className="w-full bg-cream-light border border-sandstone-light/35 rounded-lg py-2 px-3 text-[11px] focus:outline-none text-foreground font-semibold"
                       />
                     </div>
-                    
+
                     <div className="space-y-1">
                       <label className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Selector UI</label>
                       <select
@@ -1616,7 +1615,7 @@ export default function ArtisanDashboard() {
 
           {/* Right Column: Listings & Active Orders */}
           <section className="lg:col-span-7 space-y-8">
-            
+
             {/* Active Orders Section */}
             <div className="space-y-4">
               <h3 className="font-archivo text-base uppercase font-bold tracking-wider text-foreground flex items-center gap-2 border-b border-sandstone-light/20 pb-3">
@@ -1633,19 +1632,18 @@ export default function ArtisanDashboard() {
               ) : (
                 <div className="space-y-4">
                   {activeOrders.map((ord) => (
-                    <div 
+                    <div
                       key={ord.id}
                       className="bg-cream-dark/20 border border-sandstone-light/10 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-4 shadow-sm"
                     >
                       <div className="space-y-2 text-left">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-archivo font-extrabold uppercase text-sandstone-dark bg-cream-dark/50 px-2 py-0.5 rounded-md">Order #{ord.id}</span>
-                          <span className={`text-[8px] font-archivo font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                            ord.status === "ready_for_pickup" ? "bg-amber-100 text-amber-800" :
-                            ord.status === "weaving" ? "bg-purple-100 text-purple-800" :
-                            ord.status === "out_for_delivery" ? "bg-blue-100 text-blue-800" :
-                            ord.status === "delivered" ? "bg-emerald-100 text-emerald-800" : "bg-zinc-100 text-zinc-800"
-                          }`}>
+                          <span className={`text-[8px] font-archivo font-extrabold uppercase px-2 py-0.5 rounded-full ${ord.status === "ready_for_pickup" ? "bg-amber-100 text-amber-800" :
+                              ord.status === "weaving" ? "bg-purple-100 text-purple-800" :
+                                ord.status === "out_for_delivery" ? "bg-blue-100 text-blue-800" :
+                                  ord.status === "delivered" ? "bg-emerald-100 text-emerald-800" : "bg-zinc-100 text-zinc-800"
+                            }`}>
                             {ord.status.replace(/_/g, ' ')}
                           </span>
                         </div>
@@ -1668,7 +1666,7 @@ export default function ArtisanDashboard() {
 
                       <div className="flex flex-col justify-between items-end shrink-0 gap-2">
                         <span className="text-sm font-archivo font-black text-sandstone-dark">₹{ord.total.toLocaleString("en-IN")}</span>
-                        
+
                         {(ord.status === "pending" || ord.status === "paid" || ord.status === "weaving") && (
                           <div className="flex gap-2">
                             {(ord.status === "pending" || ord.status === "paid") && (
@@ -1715,7 +1713,7 @@ export default function ArtisanDashboard() {
               ) : (
                 <div className="space-y-4">
                   {deliveredOrders.map((ord) => (
-                    <div 
+                    <div
                       key={ord.id}
                       className="bg-emerald-50/10 border border-emerald-500/10 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-4 shadow-sm"
                     >
@@ -1786,7 +1784,7 @@ export default function ArtisanDashboard() {
                           alt=""
                           className="w-12 h-12 rounded-lg object-cover bg-cream-dark border border-sandstone-light/10 shrink-0"
                         />
-                        
+
                         <div className="flex-grow text-left">
                           <h4 className="font-archivo text-xs sm:text-sm uppercase font-bold text-foreground line-clamp-1">
                             {p.title}
@@ -1800,7 +1798,7 @@ export default function ArtisanDashboard() {
                           <p className="font-archivo text-sm font-black text-sandstone-dark">
                             ₹{p.base_price.toLocaleString("en-IN")}
                           </p>
-                          
+
                           {p.is_customizable ? (
                             <span className="inline-flex items-center gap-0.5 text-[8px] font-archivo font-extrabold uppercase text-coral-accent bg-coral-accent/10 py-0.5 px-1.5 rounded-full mt-1">
                               <Settings className="w-2 h-2" /> Customizable
@@ -1861,13 +1859,13 @@ export default function ArtisanDashboard() {
                   </h3>
                   <p className="text-[10px] text-foreground/50">Campaign materials for "{marketingProduct.title}"</p>
                 </div>
-                <button 
-                  onClick={() => { 
-                    setMarketingProduct(null); 
-                    setMarketingKit(null); 
-                    setEmailSent(false); 
-                    setSocialPublished(false); 
-                    setAdLaunched(false); 
+                <button
+                  onClick={() => {
+                    setMarketingProduct(null);
+                    setMarketingKit(null);
+                    setEmailSent(false);
+                    setSocialPublished(false);
+                    setAdLaunched(false);
                   }}
                   className="bg-cream-dark/50 hover:bg-cream-dark p-1.5 rounded-full text-foreground/60 transition-all text-xs font-bold font-mono px-3"
                 >
@@ -1887,18 +1885,18 @@ export default function ArtisanDashboard() {
                     <div className="flex justify-between items-center border-b border-sandstone-light/10 pb-1.5 mb-2">
                       <span className="text-[10px] font-archivo font-extrabold uppercase text-coral-accent">Instagram Post Caption</span>
                       <div className="flex gap-2.5">
-                        <button 
+                        <button
                           onClick={() => handleCopyText(marketingKit.instagram_post, 'insta')}
                           className="text-[9px] font-archivo font-bold text-sandstone-dark hover:text-coral-accent flex items-center gap-0.5"
                         >
                           {copiedKey === 'insta' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                           {copiedKey === 'insta' ? 'Copied' : 'Copy'}
                         </button>
-                        <button 
+                        <button
                           onClick={handlePublishInstagram}
                           className="text-[9px] font-archivo font-black text-white bg-coral-accent hover:bg-coral-dark py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all"
                         >
-                          🌐 Post on Instagram
+                          Post on Instagram
                         </button>
                       </div>
                     </div>
@@ -1912,18 +1910,18 @@ export default function ArtisanDashboard() {
                     <div className="flex justify-between items-center border-b border-sandstone-light/10 pb-1.5 mb-2">
                       <span className="text-[10px] font-archivo font-extrabold uppercase text-coral-accent">Facebook Post Text</span>
                       <div className="flex gap-2.5">
-                        <button 
+                        <button
                           onClick={() => handleCopyText(marketingKit.facebook_post, 'fb')}
                           className="text-[9px] font-archivo font-bold text-sandstone-dark hover:text-coral-accent flex items-center gap-0.5"
                         >
                           {copiedKey === 'fb' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                           {copiedKey === 'fb' ? 'Copied' : 'Copy'}
                         </button>
-                        <button 
+                        <button
                           onClick={handlePublishFacebook}
                           className="text-[9px] font-archivo font-black text-white bg-coral-accent hover:bg-coral-dark py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all"
                         >
-                          🌐 Post on Facebook
+                          Post on Facebook
                         </button>
                       </div>
                     </div>
@@ -1937,18 +1935,18 @@ export default function ArtisanDashboard() {
                     <div className="flex justify-between items-center border-b border-sandstone-light/10 pb-1.5 mb-2">
                       <span className="text-[10px] font-archivo font-extrabold uppercase text-coral-accent">Email Newsletter Template</span>
                       <div className="flex gap-2.5">
-                        <button 
+                        <button
                           onClick={() => handleCopyText(`Subject: ${marketingKit.newsletter_subject}\n\n${marketingKit.newsletter_body}`, 'email')}
                           className="text-[9px] font-archivo font-bold text-sandstone-dark hover:text-coral-accent flex items-center gap-0.5"
                         >
                           {copiedKey === 'email' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                           {copiedKey === 'email' ? 'Copied' : 'Copy'}
                         </button>
-                        <button 
+                        <button
                           onClick={handleSendEmailClient}
                           className="text-[9px] font-archivo font-black text-white bg-[#43472E] hover:bg-[#6c7249] py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all"
                         >
-                          📧 Send via Email Client
+                          Send via Email Client
                         </button>
                       </div>
                     </div>
@@ -1965,18 +1963,18 @@ export default function ArtisanDashboard() {
                     <div className="flex justify-between items-center border-b border-sandstone-light/10 pb-1.5 mb-2">
                       <span className="text-[10px] font-archivo font-extrabold uppercase text-coral-accent">Google Search Ad Text</span>
                       <div className="flex gap-2.5">
-                        <button 
+                        <button
                           onClick={() => handleCopyText(marketingKit.search_ad_copy, 'ad')}
                           className="text-[9px] font-archivo font-bold text-sandstone-dark hover:text-coral-accent flex items-center gap-0.5"
                         >
                           {copiedKey === 'ad' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                           {copiedKey === 'ad' ? 'Copied' : 'Copy'}
                         </button>
-                        <button 
+                        <button
                           onClick={handleLaunchGoogleAds}
                           className="text-[9px] font-archivo font-black text-white bg-blue-600 hover:bg-blue-800 py-1 px-2.5 rounded-lg flex items-center gap-1 transition-all"
                         >
-                          🚀 Launch Google Ads Campaign
+                          Launch Google Ads Campaign
                         </button>
                       </div>
                     </div>

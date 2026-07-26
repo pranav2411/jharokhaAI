@@ -337,6 +337,41 @@ def create_artisan(artisan: models.Artisan, session: Session = Depends(get_sessi
     session.refresh(artisan)
     return artisan
 
+def get_category_default_image(category_id: int) -> str:
+    # 2 -> Pottery, 3 -> Woodwork, 1 -> Textile, 4 -> Metal
+    if category_id == 2:
+        return "/static/studio_pottery.png"
+    elif category_id == 3:
+        return "/static/studio_woodwork.png"
+    elif category_id == 1:
+        return "/static/studio_textile.png"
+    elif category_id == 4:
+        return "/static/studio_metal.png"
+    return "/static/studio_pottery.png"
+
+def sanitize_product_images(images: list, category_id: int) -> list:
+    if not images:
+        return [get_category_default_image(category_id)]
+    
+    sanitized = []
+    for img in images:
+        if not img:
+            continue
+        # If the image points to an uploaded static file in the container
+        # e.g., it contains '/static/' but NOT one of our checked-in studio_*.png backdrops
+        if "/static/" in img and "studio_" not in img:
+            filename = img.split("/")[-1]
+            filepath = os.path.join(upload_dir, filename)
+            if not os.path.exists(filepath):
+                # The file was wiped out! Use category default fallback
+                sanitized.append(get_category_default_image(category_id))
+                continue
+        sanitized.append(img)
+        
+    if not sanitized:
+        sanitized.append(get_category_default_image(category_id))
+    return sanitized
+
 # --- Products ---
 @app.get("/api/products")
 def get_products(
@@ -387,7 +422,7 @@ def get_products(
             "is_customizable": p.is_customizable,
             "is_featured": p.is_featured,
             "stock_qty": p.stock_qty,
-            "images": p.images,
+            "images": sanitize_product_images(p.images, p.category_id),
             "status": p.status,
             "artisan_name": artisan_user.name if artisan_user else "Unknown Artisan",
             "artisan_id": p.artisan_id,
@@ -428,7 +463,7 @@ def get_featured_products(session: Session = Depends(get_session)):
             "is_customizable": p.is_customizable,
             "is_featured": p.is_featured,
             "stock_qty": p.stock_qty,
-            "images": p.images,
+            "images": sanitize_product_images(p.images, p.category_id),
             "status": p.status,
             "artisan_name": artisan_user.name if artisan_user else "Unknown Artisan",
             "artisan_id": p.artisan_id,
@@ -475,7 +510,7 @@ def get_product(product_id: int, session: Session = Depends(get_session)):
         "base_price": product.base_price,
         "is_customizable": product.is_customizable,
         "stock_qty": product.stock_qty,
-        "images": product.images,
+        "images": sanitize_product_images(product.images, product.category_id),
         "status": product.status,
         "pricing_formula": product.pricing_formula,
         "quality_rating": product.quality_rating,
@@ -551,7 +586,7 @@ def get_cart(user_id: int, session: Session = Depends(get_session)):
                     "id": product.id,
                     "title": product.title,
                     "base_price": product.base_price,
-                    "images": product.images,
+                    "images": sanitize_product_images(product.images, product.category_id),
                     "artisan_name": artisan_user.name if artisan_user else "Unknown Artisan"
                 }
             })
@@ -676,7 +711,7 @@ def get_user_orders(user_id: int, session: Session = Depends(get_session)):
                 "customizations": it.customizations,
                 "price_at_purchase": it.price_at_purchase,
                 "product_title": prod.title if prod else "Deleted Product",
-                "product_image": prod.images[0] if prod and prod.images else None
+                "product_image": sanitize_product_images(prod.images, prod.category_id)[0] if prod else None
             })
             
         hydrated.append({
