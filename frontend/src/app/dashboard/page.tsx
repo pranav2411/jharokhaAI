@@ -49,6 +49,8 @@ interface Order {
     customizations: any;
     price_at_purchase: number;
     product_title: string;
+    artisan_id?: number;
+    artisan_name?: string;
   }>;
 }
 
@@ -680,6 +682,13 @@ export default function ArtisanDashboard() {
     }
   };
 
+  // Filter orders for this specific artisan (artisan ID = 1)
+  const myOrders = orders.filter((o: any) => 
+    o.items?.some((it: any) => it.artisan_id === 1)
+  );
+
+  const activeOrders = myOrders.filter((o: any) => o.status !== "delivered");
+  const deliveredOrders = myOrders.filter((o: any) => o.status === "delivered");
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-light text-foreground">
@@ -1330,13 +1339,13 @@ export default function ArtisanDashboard() {
 
               {ordersLoading ? (
                 <div className="animate-pulse bg-cream-dark/20 h-24 rounded-xl" />
-              ) : orders.length === 0 ? (
+              ) : activeOrders.length === 0 ? (
                 <div className="text-center py-10 bg-cream-dark/10 rounded-2xl border border-dashed border-sandstone-light/20">
-                  <p className="text-xs text-foreground/50">No orders placed on your listings yet.</p>
+                  <p className="text-xs text-foreground/50">No active orders placed on your listings.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {orders.map((ord) => (
+                  {activeOrders.map((ord) => (
                     <div 
                       key={ord.id}
                       className="bg-cream-dark/20 border border-sandstone-light/10 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-4 shadow-sm"
@@ -1352,13 +1361,12 @@ export default function ArtisanDashboard() {
                           }`}>
                             {ord.status.replace(/_/g, ' ')}
                           </span>
-
                         </div>
 
                         <div className="space-y-1">
                           <span className="text-[8px] font-bold text-olive-dark uppercase">Products to pack:</span>
                           <ul className="text-xs font-semibold text-foreground/80 list-disc list-inside">
-                            {ord.items.map((it, index) => (
+                            {ord.items.filter((it: any) => it.artisan_id === 1).map((it: any, index: number) => (
                               <li key={index}>
                                 {it.product_title} (x{it.qty})
                               </li>
@@ -1398,12 +1406,66 @@ export default function ArtisanDashboard() {
                           </span>
                         )}
                       </div>
-
                     </div>
                   ))}
                 </div>
               )}
             </div>
+
+            {/* Delivery History Section */}
+            <div className="space-y-4 pt-4">
+              <h3 className="font-archivo text-base uppercase font-bold tracking-wider text-foreground flex items-center gap-2 border-b border-sandstone-light/20 pb-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                Delivery History (Completed)
+              </h3>
+
+              {ordersLoading ? (
+                <div className="animate-pulse bg-cream-dark/20 h-24 rounded-xl" />
+              ) : deliveredOrders.length === 0 ? (
+                <div className="text-center py-10 bg-cream-dark/10 rounded-2xl border border-dashed border-sandstone-light/20">
+                  <p className="text-xs text-foreground/50">No completed deliveries yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {deliveredOrders.map((ord) => (
+                    <div 
+                      key={ord.id}
+                      className="bg-emerald-50/10 border border-emerald-500/10 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-4 shadow-sm"
+                    >
+                      <div className="space-y-2 text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-archivo font-extrabold uppercase text-sandstone-dark bg-cream-dark/50 px-2 py-0.5 rounded-md">Order #{ord.id}</span>
+                          <span className="text-[8px] font-archivo font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                            Delivered
+                          </span>
+                        </div>
+
+                        <div className="space-y-1">
+                          <span className="text-[8px] font-bold text-olive-dark uppercase">Products delivered:</span>
+                          <ul className="text-xs font-semibold text-foreground/80 list-disc list-inside">
+                            {ord.items.filter((it: any) => it.artisan_id === 1).map((it: any, index: number) => (
+                              <li key={index}>
+                                {it.product_title} (x{it.qty})
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <p className="text-[10px] font-medium text-foreground/60 leading-relaxed">
+                          📍 Shipped to: <span className="font-bold">{ord.shipping_address}</span>
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col justify-center items-end shrink-0">
+                        <span className="text-sm font-archivo font-black text-emerald-700">₹{ord.total.toLocaleString("en-IN")}</span>
+                        <span className="text-[8px] text-foreground/40 font-medium mt-1">Transaction Completed</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
 
             {/* Listing Directory Section */}
             <div className="space-y-4">

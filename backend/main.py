@@ -860,12 +860,17 @@ def get_all_orders(session: Session = Depends(get_session)):
         items_hydrated = []
         for it in items:
             prod = session.get(models.Product, it.product_id)
+            artisan = session.get(models.Artisan, prod.artisan_id) if prod else None
+            artisan_user = session.get(models.User, artisan.user_id) if artisan else None
             items_hydrated.append({
                 "id": it.id,
                 "qty": it.qty,
                 "customizations": it.customizations,
                 "price_at_purchase": it.price_at_purchase,
-                "product_title": prod.title if prod else "Deleted Product"
+                "product_title": prod.title if prod else "Deleted Product",
+                "product_id": it.product_id,
+                "artisan_id": prod.artisan_id if prod else None,
+                "artisan_name": artisan_user.name if artisan_user else "Unknown Artisan"
             })
             
         hydrated.append({

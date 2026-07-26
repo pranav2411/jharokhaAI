@@ -32,6 +32,8 @@ interface OrderItem {
   customizations: Record<string, any>;
   price_at_purchase: number;
   product_title: string;
+  artisan_name?: string;
+  artisan_id?: number;
 }
 
 interface Order {
@@ -497,6 +499,9 @@ export default function AdminPortal() {
       </div>
     );
   }
+
+  const activeOrders = orders.filter((o: any) => o.status !== "delivered");
+  const deliveredOrders = orders.filter((o: any) => o.status === "delivered");
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-light text-foreground font-sans antialiased">
@@ -1005,63 +1010,125 @@ export default function AdminPortal() {
           {/* TAB 3: Manage Orders with timeline updates */}
           {activeTab === "orders" && (
             <div className="space-y-8">
-              <div>
-                <span className="text-coral-accent font-archivo text-xs uppercase tracking-widest font-extrabold">Delivery Logs</span>
-                <h2 className="font-archivo text-xl uppercase font-bold text-foreground mt-0.5">Weaving & Dispatch Registry</h2>
-                <div className="w-12 h-0.5 bg-sandstone-light mt-2" />
+              {/* Active Section */}
+              <div className="space-y-4">
+                <div>
+                  <span className="text-coral-accent font-archivo text-xs uppercase tracking-widest font-extrabold">Delivery Logs</span>
+                  <h2 className="font-archivo text-xl uppercase font-bold text-foreground mt-0.5">Weaving & Dispatch Registry</h2>
+                  <div className="w-12 h-0.5 bg-sandstone-light mt-2" />
+                </div>
+
+                {activeOrders.length === 0 ? (
+                  <p className="text-xs text-foreground/50 text-center py-10 bg-cream-dark/10 rounded-2xl border border-dashed border-sandstone-light/20">No active shipping workflows.</p>
+                ) : (
+                  <div className="space-y-5">
+                    {activeOrders.map((ord) => (
+                      <div
+                        key={ord.id}
+                        className="bg-cream-light border border-sandstone-light/20 rounded-xl p-5 space-y-4 text-xs shadow-sm"
+                      >
+                        <div className="flex flex-col sm:flex-row justify-between gap-3 border-b border-sandstone-light/10 pb-3 items-start sm:items-center text-left">
+                          <div className="space-y-0.5">
+                            <p className="font-archivo text-foreground font-bold">#JHA-{ord.id}</p>
+                            <p className="text-[10px] text-foreground/50">Buyer: {ord.buyer_name}</p>
+                          </div>
+                          
+                          <div className="sm:text-right space-y-0.5">
+                            <p className="font-archivo font-bold text-sandstone-dark">Total: ₹{ord.total.toLocaleString("en-IN")}</p>
+                            <p className="text-[10px] text-foreground/50">{new Date(ord.created_at).toLocaleDateString()}</p>
+                          </div>
+
+                          {/* Status Select dropdown */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[9px] uppercase font-bold text-olive-dark">Order Status:</span>
+                            <select
+                              value={ord.status}
+                              onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value)}
+                              className="bg-cream-light border border-sandstone-light/45 text-foreground py-1.5 px-3 rounded-lg text-xs font-bold focus:outline-none"
+                            >
+                              <option value="pending">Pending Payment Approval</option>
+                              <option value="paid">Paid (Approve mandate)</option>
+                              <option value="weaving">Weaving (Co-creating)</option>
+                              <option value="ready_for_pickup">Ready for Pickup</option>
+                              <option value="out_for_delivery">Out for Delivery</option>
+                              <option value="delivered">Delivered (Completed)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Items lists */}
+                        <div className="space-y-2">
+                          {ord.items.map((it) => (
+                            <div key={it.id} className="flex justify-between items-center text-foreground/80">
+                              <span className="text-left flex items-center gap-2">
+                                <span>{it.product_title}</span>
+                                <span className="text-foreground/50 font-bold">x {it.qty}</span>
+                                <span className="text-[8px] font-bold text-olive-dark bg-cream-dark/45 px-1.5 py-0.5 rounded uppercase tracking-wider font-archivo">
+                                  Artisan: {it.artisan_name}
+                                </span>
+                              </span>
+                              <span className="font-sans font-bold text-sandstone-dark">₹{it.price_at_purchase.toLocaleString("en-IN")}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {orders.length === 0 ? (
-                <p className="text-xs text-foreground/50 text-center py-10">No checkout transactions completed yet.</p>
-              ) : (
-                <div className="space-y-5">
-                  {orders.map((ord) => (
-                    <div
-                      key={ord.id}
-                      className="bg-cream-light border border-sandstone-light/20 rounded-xl p-5 space-y-4 text-xs shadow-sm"
-                    >
-                      <div className="flex flex-col sm:flex-row justify-between gap-3 border-b border-sandstone-light/10 pb-3 items-start sm:items-center">
-                        <div className="text-left space-y-0.5">
-                          <p className="font-archivo text-foreground font-bold">#JHA-{ord.id}</p>
-                          <p className="text-[10px] text-foreground/50">Buyer: {ord.buyer_name}</p>
-                        </div>
-                        
-                        <div className="text-left sm:text-right space-y-0.5">
-                          <p className="font-archivo font-bold text-sandstone-dark">Total: ₹{ord.total.toLocaleString("en-IN")}</p>
-                          <p className="text-[10px] text-foreground/50">{new Date(ord.created_at).toLocaleDateString()}</p>
-                        </div>
-
-                        {/* Status Select dropdown */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[9px] uppercase font-bold text-olive-dark">Order Status:</span>
-                          <select
-                            value={ord.status}
-                            onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value)}
-                            className="bg-cream-light border border-sandstone-light/45 text-foreground py-1.5 px-3 rounded-lg text-xs font-bold focus:outline-none"
-                          >
-                            <option value="pending">Paid (Approve mandate)</option>
-                            <option value="paid">Weaving (Co-creating)</option>
-                            <option value="shipped">Dispatched (Dispatched)</option>
-                            <option value="delivered">Delivered (Completed)</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Items lists */}
-                      <div className="space-y-2">
-                        {ord.items.map((it) => (
-                          <div key={it.id} className="flex justify-between items-center text-foreground/80">
-                            <span className="text-left">
-                              {it.product_title} <span className="text-foreground/50 font-bold">x {it.qty}</span>
-                            </span>
-                            <span className="font-sans font-bold text-sandstone-dark">₹{it.price_at_purchase.toLocaleString("en-IN")}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+              {/* Delivery History Section */}
+              <div className="space-y-4 pt-6 border-t border-sandstone-light/20">
+                <div>
+                  <span className="text-emerald-700 font-archivo text-xs uppercase tracking-widest font-extrabold">Delivery History</span>
+                  <h2 className="font-archivo text-xl uppercase font-bold text-foreground mt-0.5">Completed Order Log (All Artisans)</h2>
+                  <div className="w-12 h-0.5 bg-emerald-600 mt-2" />
                 </div>
-              )}
+
+                {deliveredOrders.length === 0 ? (
+                  <p className="text-xs text-foreground/50 text-center py-10 bg-cream-dark/10 rounded-2xl border border-dashed border-sandstone-light/20">No completed orders yet.</p>
+                ) : (
+                  <div className="space-y-5">
+                    {deliveredOrders.map((ord) => (
+                      <div
+                        key={ord.id}
+                        className="bg-emerald-50/10 border border-emerald-500/10 rounded-xl p-5 space-y-4 text-xs shadow-sm"
+                      >
+                        <div className="flex flex-col sm:flex-row justify-between gap-3 border-b border-emerald-500/10 pb-3 items-start sm:items-center text-left">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <p className="font-archivo text-foreground font-bold">#JHA-{ord.id}</p>
+                              <span className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded">Completed</span>
+                            </div>
+                            <p className="text-[10px] text-foreground/50">Buyer: {ord.buyer_name}</p>
+                          </div>
+                          
+                          <div className="sm:text-right space-y-0.5 font-sans font-bold text-emerald-700">
+                            <p>Total: ₹{ord.total.toLocaleString("en-IN")}</p>
+                            <p className="text-[10px] text-foreground/50 font-normal">{new Date(ord.created_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+
+                        {/* Items lists */}
+                        <div className="space-y-2">
+                          {ord.items.map((it) => (
+                            <div key={it.id} className="flex justify-between items-center text-foreground/80">
+                              <span className="text-left flex items-center gap-2">
+                                <span>{it.product_title}</span>
+                                <span className="text-foreground/50 font-bold">x {it.qty}</span>
+                                <span className="text-[8px] font-bold text-olive-dark bg-cream-dark/45 px-1.5 py-0.5 rounded uppercase tracking-wider font-archivo">
+                                  Artisan: {it.artisan_name}
+                                </span>
+                              </span>
+                              <span className="font-sans font-bold text-sandstone-dark">₹{it.price_at_purchase.toLocaleString("en-IN")}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
