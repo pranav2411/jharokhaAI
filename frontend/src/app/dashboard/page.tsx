@@ -105,8 +105,9 @@ export default function ArtisanDashboard() {
   const [compiledPricingFormula, setCompiledPricingFormula] = useState("");
 
   // Customization Options Builder State
-  const [optName, setOptName] = useState("Glaze Accent");
-  const [optType, setOptType] = useState("color_swatch"); // select, color_swatch, text
+  const [customizationOptions, setCustomizationOptions] = useState<any[]>([]);
+  const [newOptLabel, setNewOptLabel] = useState("");
+  const [newOptType, setNewOptType] = useState("color_swatch"); // select, color_swatch, text
 
   // Marketing Assistant Widget State
   const [marketingProduct, setMarketingProduct] = useState<Product | null>(null);
@@ -351,11 +352,7 @@ export default function ArtisanDashboard() {
     setProductImages(p.images || []);
     
     setCompiledPricingFormula(p.pricing_formula || "");
-    
-    if (p.customization_options && p.customization_options.length > 0) {
-      setOptName(p.customization_options[0].option_name);
-      setOptType(p.customization_options[0].option_type);
-    }
+    setCustomizationOptions(p.customization_options || []);
     
     const formEl = document.getElementById("add-creation-form");
     if (formEl) {
@@ -371,10 +368,58 @@ export default function ArtisanDashboard() {
     setCategory(2);
     setIsCustomizable(true);
     setProductImages([]);
+    setCustomizationOptions([]);
     setCompiledPricingFormula("");
     setFormulaInstructions("");
     setSandboxResult(null);
     setQualityMatchReport(null);
+  };
+
+  const handleAddOption = () => {
+    if (!newOptLabel.trim()) {
+      alert("Please enter an option name.");
+      return;
+    }
+    
+    if (customizationOptions.some(o => o.option_name.toLowerCase() === newOptLabel.toLowerCase().trim())) {
+      alert("An option with this name already exists.");
+      return;
+    }
+
+    let choices: any = [];
+    if (newOptType === "color_swatch") {
+      choices = [
+        { name: "Saffron Amber", price: 0.0, color: "#D98354" },
+        { name: "Cobalt Blue", price: 150.0, color: "#1A2B4C" },
+        { name: "Forest Olive", price: 100.0, color: "#5A5F3D" }
+      ];
+    } else if (newOptType === "select") {
+      choices = [
+        { name: "Classic Standard", price: 0.0 },
+        { name: "Premium Engraved", price: 250.0 }
+      ];
+    } else {
+      choices = {
+        placeholder: "Enter custom monogram initials",
+        max_len: 8,
+        price: 150.0
+      };
+    }
+
+    setCustomizationOptions(prev => [
+      ...prev,
+      {
+        option_name: newOptLabel.trim(),
+        option_type: newOptType,
+        choices,
+        price_delta: 0.0
+      }
+    ]);
+    setNewOptLabel("");
+  };
+
+  const handleRemoveOption = (idxToRemove: number) => {
+    setCustomizationOptions(prev => prev.filter((_, idx) => idx !== idxToRemove));
   };
 
   const handlePhotoUpload = async (file: File) => {
@@ -647,27 +692,6 @@ export default function ArtisanDashboard() {
     e.preventDefault();
     if (!title || !description) return;
 
-    // Define choices depending on option type selected
-    let choices: any = [];
-    if (optType === "color_swatch") {
-      choices = [
-        { name: "Saffron Amber", price: 0.0, color: "#D98354" },
-        { name: "Cobalt Blue", price: 150.0, color: "#1A2B4C" },
-        { name: "Forest Olive", price: 100.0, color: "#5A5F3D" }
-      ];
-    } else if (optType === "select") {
-      choices = [
-        { name: "Classic Standard", price: 0.0 },
-        { name: "Premium Engraved", price: 250.0 }
-      ];
-    } else {
-      choices = {
-        placeholder: "Enter custom monogram initials",
-        max_len: 8,
-        price: 150.0
-      };
-    }
-
     const payload = {
       artisan_id: 1, // Riya Sen
       category_id: Number(category),
@@ -679,14 +703,7 @@ export default function ArtisanDashboard() {
       images: productImages,
       status: "active",
       pricing_formula: compiledPricingFormula || null,
-      customization_options: isCustomizable ? [
-        {
-          option_name: optName,
-          option_type: optType,
-          choices,
-          price_delta: 0.0
-        }
-      ] : []
+      customization_options: isCustomizable ? customizationOptions : []
     };
 
     try {
@@ -1241,16 +1258,37 @@ export default function ArtisanDashboard() {
               {isCustomizable && (
                 <div className="bg-cream-light border border-sandstone-light/20 rounded-2xl p-4 space-y-4">
                   <h4 className="text-[10px] uppercase font-archivo font-extrabold tracking-widest text-coral-accent">
-                    Custom Option Config
+                    Custom Options Builder
                   </h4>
                   
-                  <div className="grid grid-cols-2 gap-3.5 border-b border-sandstone-light/10 pb-3.5">
+                  {customizationOptions.length > 0 && (
+                    <div className="space-y-2 border-b border-sandstone-light/10 pb-3.5 text-left">
+                      <p className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Configured Options:</p>
+                      <div className="space-y-1.5">
+                        {customizationOptions.map((opt, idx) => (
+                          <div key={idx} className="flex justify-between items-center bg-cream-dark/20 py-1.5 px-3 rounded-lg text-xs font-semibold text-foreground/80">
+                            <span>{opt.option_name} ({opt.option_type === "color_swatch" ? "Color Swatch" : opt.option_type === "select" ? "Dropdown Select" : "Text Monogram"})</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveOption(idx)}
+                              className="text-[9px] font-archivo font-extrabold uppercase text-rose-600 hover:text-rose-800 tracking-wider cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3.5 pb-2 text-left">
                     <div className="space-y-1">
-                      <label className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Option Label</label>
+                      <label className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Option Name</label>
                       <input
                         type="text"
-                        value={optName}
-                        onChange={(e) => setOptName(e.target.value)}
+                        placeholder="e.g. Dimensions"
+                        value={newOptLabel}
+                        onChange={(e) => setNewOptLabel(e.target.value)}
                         className="w-full bg-cream-light border border-sandstone-light/35 rounded-lg py-2 px-3 text-[11px] focus:outline-none text-foreground font-semibold"
                       />
                     </div>
@@ -1258,8 +1296,8 @@ export default function ArtisanDashboard() {
                     <div className="space-y-1">
                       <label className="text-[8px] font-bold uppercase tracking-wider text-olive-dark">Selector UI</label>
                       <select
-                        value={optType}
-                        onChange={(e) => setOptType(e.target.value)}
+                        value={newOptType}
+                        onChange={(e) => setNewOptType(e.target.value)}
                         className="w-full bg-cream-light border border-sandstone-light/35 rounded-lg py-2 px-3 text-[11px] focus:outline-none text-foreground font-semibold"
                       >
                         <option value="color_swatch">Color Swatch</option>
@@ -1268,6 +1306,14 @@ export default function ArtisanDashboard() {
                       </select>
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddOption}
+                    className="w-full bg-sandstone-dark/10 hover:bg-sandstone-dark text-sandstone-dark hover:text-white text-[9px] font-archivo font-extrabold uppercase py-2 rounded-lg transition-all cursor-pointer"
+                  >
+                    + Add Customization Option
+                  </button>
 
                   {/* Self Healing Dynamic Pricing Sandbox Section */}
                   <div className="space-y-3 pt-1">

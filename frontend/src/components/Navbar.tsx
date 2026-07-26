@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { Landmark, ShoppingBag, User, Compass, History, Menu, X, LogOut, Key, Settings } from "lucide-react";
+import { Landmark, ShoppingBag, User, Compass, History, Menu, X, LogOut, Key, Settings, LayoutDashboard } from "lucide-react";
 
 export const Navbar: React.FC = () => {
   const { cartCount } = useCart();
@@ -66,6 +66,15 @@ export const Navbar: React.FC = () => {
               >
                 <Key className="w-4 h-4" />
                 Admin Portal
+              </Link>
+            )}
+            {(currentUser?.role === "artisan" || currentUser?.role === "admin") && (
+              <Link
+                href="/dashboard"
+                className="text-sandstone-dark hover:text-foreground font-bold text-sm transition-colors flex items-center gap-1.5 bg-sandstone-dark/10 px-3 py-1.5 rounded-lg border border-sandstone-light/30"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Artisan Dashboard
               </Link>
             )}
           </div>
@@ -175,6 +184,15 @@ export const Navbar: React.FC = () => {
               className="block px-3 py-2 rounded-md bg-coral-accent/10 font-bold text-coral-accent transition-colors"
             >
               Admin Portal
+            </Link>
+          )}
+          {(currentUser?.role === "artisan" || currentUser?.role === "admin") && (
+            <Link
+              href="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-md bg-sandstone-light/10 font-bold text-sandstone-dark transition-colors"
+            >
+              Artisan Dashboard
             </Link>
           )}
           {currentUser ? (
